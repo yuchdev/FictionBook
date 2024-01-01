@@ -1,3 +1,4 @@
+import sys
 import argparse
 
 from fictionbook2.writer import Fb2Writer
@@ -6,7 +7,7 @@ from fictionbook2.reader import Fb2Reader
 
 def reader_example(file_path):
     # Example usage:
-    reader = Fb2Reader(file_path)
+    reader = Fb2Reader(file_path, images_dir='./images')
     reader.read()
 
     # Access extracted data
@@ -76,5 +77,8 @@ def main():
         print(f"Writing {file_path}")
         writer_example(file_path)
 
-    if __name__ == "__main__":
-        main()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
