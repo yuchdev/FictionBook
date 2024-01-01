@@ -11,13 +11,9 @@ def reader_example(file_path):
     reader.read()
 
     # Access extracted data
-    print("Metadata:", reader.metadata)
-    print("Cover Image:", reader.cover_image)
-
-    # Write chapters to file
-    with open("chapters.txt", "w", encoding="utf-8") as f:
-        for chapter in reader.chapters:
-            f.write("\n".join(chapter))
+    print("Metadata: ", reader.metadata)
+    print("Cover Image: ", reader.cover_image)
+    print("Chapters: ", reader.chapters)
 
 
 def writer_example(file_path):

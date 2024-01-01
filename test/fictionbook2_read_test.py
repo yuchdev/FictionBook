@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 
-class Fictionbook2Test(unittest.TestCase):
+class Fictionbook2ReaderTest(unittest.TestCase):
 
     def test_initial(self):
         pass

@@ -39,8 +39,8 @@ class Fb2Reader:
                 metadata_dict[elem.tag] = elem.text.strip() if elem.text else ""
 
             # Handle cover image
-            if elem.tag.endswith("coverpage") and elem.find(".//{http://www.gribuser.ru/xml/fictionbook/2.0}image") is not None:
-                href = elem.find(".//{http://www.gribuser.ru/xml/fictionbook/2.0}image").attrib["l:href"]
+            if elem.tag.endswith("coverpage") and elem.find("image") is not None:
+                href = elem.find("image").attrib["l:href"]
                 self.cover_image = href[1:]  # Remove the '#' character
 
     def _extract_chapters(self, root):
