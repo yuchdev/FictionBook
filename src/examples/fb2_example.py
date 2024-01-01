@@ -1,6 +1,5 @@
 import argparse
 
-from fictionbook2.fb2 import FictionBook2
 from fictionbook2.writer import Fb2Writer
 from fictionbook2.reader import Fb2Reader
 
@@ -12,8 +11,12 @@ def reader_example(file_path):
 
     # Access extracted data
     print("Metadata:", reader.metadata)
-    print("Chapters:", reader.chapters)
     print("Cover Image:", reader.cover_image)
+
+    # Write chapters to file
+    with open("chapters.txt", "w", encoding="utf-8") as f:
+        for chapter in reader.chapters:
+            f.write("\n".join(chapter))
 
 
 def writer_example(file_path):
@@ -67,8 +70,10 @@ def main():
 
     file_path = args.file_path
     if args.mode == "read":
+        print(f"Reading {file_path}")
         reader_example(file_path)
     elif args.mode == "write":
+        print(f"Writing {file_path}")
         writer_example(file_path)
 
     if __name__ == "__main__":
