@@ -8,10 +8,27 @@ class Fb2Reader:
         self.images_dir = images_dir
         self.metadata = {}
         self.chapters = []
+        self.paragraphs = []
         self.cover_image = None
 
     def chapter_count(self):
         return len(self.chapters)
+
+    def _chapters_to_paragraphs(self, chapters):
+        """
+        Convert list of chapters to lost of paragraphs (strings ended with EOL)
+        :return: list of paragraphs
+        """
+        paragraphs = []
+        for chapter in chapters:
+            if isinstance(chapter, list):
+                # If the chapter is a list, it contains subchapters, so recursively process it
+                subchapter_paragraphs = self._chapters_to_paragraphs(chapters=chapter)
+                paragraphs.extend(subchapter_paragraphs)
+            elif isinstance(chapter, str):
+                # If the chapter is a string, it's a leaf node (paragraph)
+                paragraphs.append(chapter)
+        return paragraphs
 
     def read(self):
         tree = et.parse(self.file_path)
@@ -19,6 +36,7 @@ class Fb2Reader:
 
         self._extract_metadata(root)
         self._extract_chapters(root)
+        self.paragraphs = self._chapters_to_paragraphs(self.chapters)
 
     def _extract_metadata(self, root):
         description_tag = root.find(".//{http://www.gribuser.ru/xml/fictionbook/2.0}description")
@@ -32,16 +50,23 @@ class Fb2Reader:
             if len(elem) > 0:
                 # Recursively set nested properties
                 sub_dict = {}
+                # clean elem.tag from namespace
+                elem.tag = elem.tag.split("}")[1]
                 metadata_dict[elem.tag] = sub_dict
                 self._extract_metadata_properties(elem, sub_dict)
             else:
+                # clean elem.tag from namespace
+                elem.tag = elem.tag.split("}")[1]
                 # Set current property
                 metadata_dict[elem.tag] = elem.text.strip() if elem.text else ""
 
             # Handle cover image
-            if elem.tag.endswith("coverpage") and elem.find("image") is not None:
-                href = elem.find("image").attrib["l:href"]
-                self.cover_image = href[1:]  # Remove the '#' character
+            if elem.tag.endswith("coverpage") and elem.find(
+                    ".//{http://www.gribuser.ru/xml/fictionbook/2.0}image") is not None:
+                image_elem = elem.find(".//{http://www.gribuser.ru/xml/fictionbook/2.0}image")
+                href_attr = image_elem.attrib.get("{http://www.w3.org/1999/xlink}href")
+                if href_attr is not None:
+                    self.cover_image = href_attr[1:]  # Remove the '#' character
 
     def _extract_chapters(self, root):
         body_tag = root.find(".//{http://www.gribuser.ru/xml/fictionbook/2.0}body")

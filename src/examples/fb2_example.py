@@ -6,6 +6,7 @@ from fictionbook2.reader import Fb2Reader
 
 
 def reader_example(file_path):
+
     # Example usage:
     reader = Fb2Reader(file_path, images_dir='./images')
     reader.read()
@@ -13,7 +14,13 @@ def reader_example(file_path):
     # Access extracted data
     print("Metadata: ", reader.metadata)
     print("Cover Image: ", reader.cover_image)
-    print("Chapters: ", reader.chapters)
+    print("Total chapters: ", len(reader.chapters))
+
+    # Calculate and print the length of subchapters
+    print("Total components: ", sum(len(chapter) for chapter in reader.chapters))
+
+    # Length of paragraphs may be different from the length of components
+    print("Total paragraphs: ", len(reader.paragraphs))
 
 
 def writer_example(file_path):
