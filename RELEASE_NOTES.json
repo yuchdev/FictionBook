@@ -6,7 +6,8 @@
     "0.1.0": {
       "release_notes": [
         "First version of FbReader class",
-        "First version of FbWriter class"
+        "First version of FbWriter class",
+        "Extfacting images from fb2 file"
       ]
     }
   }
