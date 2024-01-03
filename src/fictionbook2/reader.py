@@ -11,7 +11,7 @@ class Fb2Reader:
     FictionBook2 reader
     """
 
-    def __init__(self, file_path: str, images_dir: str):
+    def __init__(self, file_path: str, images_dir: str, download_images=False):
         """
         :param file_path:
         :param images_dir:
@@ -26,8 +26,19 @@ class Fb2Reader:
         self.chapters = []
         self.paragraphs = []
         self.cover_image = None
+        if not os.path.isdir(self.images_dir):
+            os.mkdir(self.images_dir)
+        self._read(download_images)
 
-    def read(self, download_images=False):
+    @property
+    def cover(self):
+        return os.path.join(self.images_dir, self.cover_image) if self.cover_image else None
+
+    @property
+    def images(self):
+        return [os.path.join(self.images_dir, image) for image in os.listdir(self.images_dir)]
+
+    def _read(self, download_images=False):
         tree = parse(self.file_path)
         root = tree.getroot()
 
@@ -62,38 +73,39 @@ class Fb2Reader:
         :param root: xml.etree.ElementTree.Element pointing to the root element of metadata
         """
         description_tag = root.find(".//{http://www.gribuser.ru/xml/fictionbook/2.0}description")
-        title_info_tag = description_tag.find(".//{http://www.gribuser.ru/xml/fictionbook/2.0}title-info")
 
         # Extract metadata properties recursively
-        self._extract_metadata_properties(title_info_tag)
+        self._extract_metadata_properties(description_tag, self.metadata)
 
-    def _extract_metadata_properties(self, parent_elem):
+    def _extract_metadata_properties(self, parent_elem, metadata_dict):
         """
         Convert metadata properties recursively from xml.etree.ElementTree.Element to dict
         :param parent_elem: xml.etree.ElementTree.Element pointing to the parent element of metadata
+        :param metadata_dict: Dictionary to store metadata properties
         :return:
         """
         for elem in parent_elem:
             if len(elem) > 0:
                 # Recursively set nested properties
                 sub_dict = {}
-                # clean elem.tag from namespace
-                elem.tag = elem.tag.split("}")[1]
-                self.metadata[elem.tag] = sub_dict
-                self._extract_metadata_properties(elem)
+                # Set current property with the correct namespace
+                tag = elem.tag.split("}")[1] if '}' in elem.tag else elem.tag
+                metadata_dict[tag] = sub_dict
+                self._extract_metadata_properties(elem, sub_dict)
             else:
-                # clean elem.tag from namespace
-                elem.tag = elem.tag.split("}")[1]
-                # Set current property
-                self.metadata[elem.tag] = elem.text.strip() if elem.text else ""
+                # Set current property with the correct namespace
+                tag = elem.tag.split("}")[1] if '}' in elem.tag else elem.tag
+                metadata_dict[tag] = elem.text.strip() if elem.text else ""
 
             # Handle cover image
             if elem.tag.endswith("coverpage"):
                 self._extract_cover(elem)
 
     def _extract_cover(self, elem):
-        # Find the image element directly within the coverpage
-        if (image_elem := elem.find("image")) is not None:
+        """
+        Find the image element directly within the coverpage
+        """
+        if (image_elem := elem.find(".//{http://www.gribuser.ru/xml/fictionbook/2.0}image")) is not None:
             if (href_attr := image_elem.attrib.get("{http://www.w3.org/1999/xlink}href")) is not None:
                 # Remove the # character
                 self.cover_image = href_attr[1:]
@@ -125,7 +137,7 @@ class Fb2Reader:
         if not ext:
             ext = f".{image_extension.lower()}"
 
-        image_path = os.path.join(self.images_dir, image_name + ext)
+        image_path = os.path.abspath(os.path.join(self.images_dir, image_name + ext))
 
         with open(image_path, 'wb') as image_file:
             image_file.write(base64.b64decode(image_data))
@@ -134,15 +146,19 @@ class Fb2Reader:
         """
         Download images from the book if <image l:href="https..."> tag is used
         and points to URL in the internet
+        Note: Images may repeat so we use set() to avoid duplicates
         """
+        images = set()
         image_elements = root.findall(".//{http://www.gribuser.ru/xml/fictionbook/2.0}image")
         for image_elem in image_elements:
             href_attr = image_elem.attrib.get("{http://www.w3.org/1999/xlink}href", "")
             if href_attr.startswith("http"):
-                # Download images using the specified href
-                self._save_image_from_url(image_url=href_attr)
+                images.add(href_attr)
+        # download images
+        for image_url in images:
+            self._download_image(image_url)
 
-    def _save_image_from_url(self, image_url):
+    def _download_image(self, image_url):
         try:
             with urllib.request.urlopen(image_url) as response:
                 if response.code == 200:

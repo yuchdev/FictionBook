@@ -3,7 +3,7 @@ from fictionbook2.writer import Fb2Writer
 from fictionbook2.reader import Fb2Reader
 
 
-class FictionBook2(Fb2Reader, Fb2Writer):
+class Fb2ReadWrite(Fb2Reader, Fb2Writer):
     """
     FictionBook2 class provides methods to deserialize and serialize FB2 books
     """
