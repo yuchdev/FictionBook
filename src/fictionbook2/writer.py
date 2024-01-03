@@ -4,10 +4,18 @@ import xml.etree.ElementTree as et
 
 
 class Fb2Writer:
-    def __init__(self, file_name):
+    def __init__(self, file_name, images_dir):
         if not file_name.endswith(".fb2"):
             file_name += ".fb2"
         self.file_name = file_name
+        self.images_dir = images_dir
+        self.metadata = {}
+        self.chapters = []
+        self.paragraphs = []
+        self.cover_image = None
+        if not os.path.isdir(self.images_dir):
+            raise ValueError("images_dir must be a directory")
+
         # Create root element
         self.fiction_book = et.Element("FictionBook", attrib={
             "xmlns": "http://www.gribuser.ru/xml/fictionbook/2.0",
@@ -64,7 +72,7 @@ class Fb2Writer:
 
         # Set metadata and chapters
         self.set_metadata(metadata)
-        self.add_coverpage(cover)
+        # self.add_coverpage(cover)
         self.set_chapters(chapters)
 
         # Create XML tree

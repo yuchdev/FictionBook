@@ -57,10 +57,29 @@ def writer_example(file_path):
     chapters = [
         {
             "title": "Chapter 1",
-            "paragraphs": ["Chapter 1 Text 1", "Chapter 1 Text 2"]
+            "paragraphs": [
+                "I decided to face my thirtieth birthday, riding down the highway on a motorcycle.",
+                "I love all kinds of symbolism. I mean, when life rhymes. "
+                "It even seems to me that these rhymes can be forged — this is a kind of magic called sympathetic, "
+                "and it's very sympathetic to me. We sort of explain to the thick-assed, clumsy fate "
+                "what we want her to look like, and sometimes she takes the hint.",
+                "But not always, which I'll come back to soon."
+            ]
+        },
+        {
+            "title": "Chapter 2",
+            "paragraphs": [
+                "Daddy showed up — probably, he sensed that I was thinking about his pasta. "
+                "He even came to my house. At first, I couldn't understand what it was all of a sudden, "
+                "until he said it himself. Thirty years. Well, yeah, the anniversary.",
+                "He didn't notice my birthdays before. But after all, "
+                "a businessman is mainly interested in the zeros to the right of the digit. "
+                "There were no zeros for a long time.",
+                "'Whose paintings are these?' he asked from the doorway. 'What huge ones. Yours?'"
+            ]
         }
     ]
-    writer = Fb2Writer(file_name=file_path)
+    writer = Fb2Writer(file_name=file_path, images_dir="./images")
     writer.write(metadata=metadata, chapters=chapters, cover="cover.jpg")
 
 
