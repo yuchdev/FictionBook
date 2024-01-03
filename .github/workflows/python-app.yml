@@ -33,4 +33,4 @@ jobs:
     - name: Run test
       run: |
         python release_package.py --mode install
-        python tests/fictionbook2_read_test.py
+        python FictionBook2/tests/fictionbook2_read_test.py
