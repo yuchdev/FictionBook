@@ -33,4 +33,4 @@ jobs:
     - name: Run test
       run: |
         python release_package.py --mode install
-        python $GITHUB_WORKSPACE/tests/fictionbook2_read_test.py
+        python $GITHUB_WORKSPACE/test/fictionbook2_read_test.py
