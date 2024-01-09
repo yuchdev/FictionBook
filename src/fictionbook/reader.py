@@ -23,7 +23,6 @@ class Fb2Reader:
         self.file_path = file_path
         self.images_dir = images_dir
         self.metadata = {}
-        self.chapters = []
         self.paragraphs = []
         self.cover_image = None
         if not os.path.isdir(self.images_dir):
@@ -43,15 +42,15 @@ class Fb2Reader:
         root = tree.getroot()
 
         self._extract_metadata(root)
-        self._extract_chapters(root)
-        self.paragraphs = self._chapters_to_paragraphs(self.chapters)
+        chapters = self._extract_paragraphs(root)
+        paragraphs = self._chapters_to_list(chapters)
         self._extract_images(root)
         if download_images:
             self._download_images(root)
 
-    def _chapters_to_paragraphs(self, chapters):
+    def _chapters_to_list(self, chapters):
         """
-        Convert list of chapters to lost of paragraphs (strings ended with EOL)
+        Convert list of XML paragraphs to a list of JSON paragraphs (list of strings ended with EOL)
         :return: list of paragraphs
         """
         if not isinstance(chapters, list):
@@ -60,7 +59,7 @@ class Fb2Reader:
         for chapter in chapters:
             if isinstance(chapter, list):
                 # If the chapter is a list, it contains subchapters, so recursively process it
-                subchapter_paragraphs = self._chapters_to_paragraphs(chapters=chapter)
+                subchapter_paragraphs = self._chapters_to_list(chapters=chapter)
                 paragraphs.extend(subchapter_paragraphs)
             elif isinstance(chapter, str):
                 # If the chapter is a string, it's a leaf node (paragraph)
@@ -69,7 +68,7 @@ class Fb2Reader:
 
     def _extract_metadata(self, root):
         """
-        Extract metadata from the root element
+        Extract metadata ('description' tag) from the root element
         :param root: xml.etree.ElementTree.Element pointing to the root element of metadata
         """
         description_tag = root.find(".//{http://www.gribuser.ru/xml/fictionbook/2.0}description")
@@ -110,14 +109,16 @@ class Fb2Reader:
                 # Remove the # character
                 self.cover_image = href_attr[1:]
 
-    def _extract_chapters(self, root):
+    def _extract_paragraphs(self, root):
+        chapters = []
         body_tag = root.find(".//{http://www.gribuser.ru/xml/fictionbook/2.0}body")
         for section_tag in body_tag.findall(".//{http://www.gribuser.ru/xml/fictionbook/2.0}section"):
             chapter = []
             for p_tag in section_tag.findall(".//{http://www.gribuser.ru/xml/fictionbook/2.0}p"):
                 paragraph = p_tag.text.strip() if p_tag.text else ""
                 chapter.append(paragraph)
-            self.chapters.append(chapter)
+            chapters.append(chapter)
+        return chapters
 
     def _extract_images(self, root):
         binary_elements = root.findall(".//{http://www.gribuser.ru/xml/fictionbook/2.0}binary")

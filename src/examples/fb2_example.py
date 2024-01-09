@@ -1,5 +1,7 @@
+import os.path
 import sys
 import argparse
+import json
 
 from fictionbook.writer import Fb2Writer
 from fictionbook.reader import Fb2Reader
@@ -12,84 +14,35 @@ def reader_example(file_path):
     # Access extracted data
     print("Metadata: ", reader.metadata)
     print("Cover Image: ", reader.cover)
-    print("Total chapters: ", len(reader.chapters))
-
-    # Calculate and print the length of subchapters
-    print("Total subchapters: ", sum(len(chapter) for chapter in reader.chapters))
+    print("Total chapters: ", len(reader.paragraphs))
 
     # Length of paragraphs may be different from the length of subchapters
     print("Total paragraphs: ", len(reader.paragraphs))
 
 
 def writer_example(file_path):
-    # Example usage:
-    metadata = {
-        "title-info": {
-            "genre": "prose_contemporary",
-            "author": {
-                "first-name": "John",
-                "last-name": "Doe",
-                "home-page": "https://example.com"
-            },
-            "book-title": "Book Title",
-            "annotation": "Book Annotation",
-            "keywords": "book, keywords",
-            "date": "2021",
-            "lang": "en"
-        },
-        "document-info": {
-            "author": "John Doe",
-            "program-used": "Python fictionbook2 library",
-            "date": "2021",
-            "src-url": "https://example.com",
-            "id": "123456789",
-            "version": "1.0"
-        },
-        "publish-info": {
-            "book-name": "Book Name",
-            "publisher": "Publisher",
-            "city": "City",
-            "year": "2021",
-            "isbn": "1234567890"
-        }
-    }
+    asset_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../..", "test", "assets"))
+    test_json = os.path.abspath(os.path.join(asset_dir, "sol_invictus_en.fb2.json"))
 
-    paragraphs2 = [
-        "I decided to face my thirtieth birthday, riding down the highway on a motorcycle.",
-        "I love all kinds of symbolism. I mean, when life rhymes. "
-        "It even seems to me that these rhymes can be forged — this is a kind of magic called sympathetic, "
-        "and it's very sympathetic to me. We sort of explain to the thick-assed, clumsy fate "
-        "what we want her to look like, and sometimes she takes the hint.",
-        "But not always, which I'll come back to soon.",
-        "",
-        "Daddy showed up — probably, he sensed that I was thinking about his pasta. "
-        "He even came to my house. At first, I couldn't understand what it was all of a sudden, "
-        "until he said it himself. Thirty years. Well, yeah, the anniversary.",
-        "He didn't notice my birthdays before. But after all, "
-        "a businessman is mainly interested in the zeros to the right of the digit. "
-        "There were no zeros for a long time.",
-        "'Whose paintings are these?' he asked from the doorway. 'What huge ones. Yours?'"
-    ]
+    with open(test_json, "r") as f:
+        data = json.load(f)
+        metadata = data["description"]
+        body = data["body"]
+        items = body[1]['section']
 
-    paragraphs = [
-        [
-            "I decided to face my thirtieth birthday, riding down the highway on a motorcycle.",
-            "I love all kinds of symbolism. I mean, when life rhymes. "
-            "It even seems to me that these rhymes can be forged — this is a kind of magic called sympathetic, "
-            "and it's very sympathetic to me. We sort of explain to the thick-assed, clumsy fate "
-            "what we want her to look like, and sometimes she takes the hint.",
-            "But not always, which I'll come back to soon."
-        ],
-        [
-            "Daddy showed up — probably, he sensed that I was thinking about his pasta. "
-            "He even came to my house. At first, I couldn't understand what it was all of a sudden, "
-            "until he said it himself. Thirty years. Well, yeah, the anniversary.",
-            "He didn't notice my birthdays before. But after all, "
-            "a businessman is mainly interested in the zeros to the right of the digit. "
-            "There were no zeros for a long time.",
-            "'Whose paintings are these?' he asked from the doorway. 'What huge ones. Yours?'"
-        ]
-    ]
+        # Split the list over elements with the key "empty-line"
+        paragraphs = []
+        temp_paragraphs = []
+        for item in items:
+            if 'empty-line' in item:
+                if temp_paragraphs:
+                    paragraphs.append(temp_paragraphs)
+                    temp_paragraphs = []
+            elif 'p' in item:
+                temp_paragraphs.append(item['p'])
+        if temp_paragraphs:
+            paragraphs.append(temp_paragraphs)
+
     writer = Fb2Writer(file_name=file_path, images_dir="./images")
     writer.set_metadata(metadata)
     writer.set_paragraphs(paragraphs)
