@@ -5,7 +5,7 @@ import subprocess
 from datetime import date
 
 DEFAULT_AUTHOR = "Yurii Cherkasov"
-DEFAULT_EMAIL = "strategarius@protonmail.com"
+DEFAULT_EMAIL = "yurii.cherkasov@atatat.com"
 
 
 def replace_in_file(file_path, old_text, new_text):

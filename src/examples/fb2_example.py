@@ -1,12 +1,11 @@
 import sys
 import argparse
 
-from fictionbook2.writer import Fb2Writer
-from fictionbook2.reader import Fb2Reader
+from fictionbook.writer import Fb2Writer
+from fictionbook.reader import Fb2Reader
 
 
 def reader_example(file_path):
-
     # Example usage:
     reader = Fb2Reader(file_path, images_dir='./images')
 
@@ -54,37 +53,51 @@ def writer_example(file_path):
             "isbn": "1234567890"
         }
     }
-    chapters = [
-        {
-            "title": "Chapter 1",
-            "paragraphs": [
-                "I decided to face my thirtieth birthday, riding down the highway on a motorcycle.",
-                "I love all kinds of symbolism. I mean, when life rhymes. "
-                "It even seems to me that these rhymes can be forged — this is a kind of magic called sympathetic, "
-                "and it's very sympathetic to me. We sort of explain to the thick-assed, clumsy fate "
-                "what we want her to look like, and sometimes she takes the hint.",
-                "But not always, which I'll come back to soon."
-            ]
-        },
-        {
-            "title": "Chapter 2",
-            "paragraphs": [
-                "Daddy showed up — probably, he sensed that I was thinking about his pasta. "
-                "He even came to my house. At first, I couldn't understand what it was all of a sudden, "
-                "until he said it himself. Thirty years. Well, yeah, the anniversary.",
-                "He didn't notice my birthdays before. But after all, "
-                "a businessman is mainly interested in the zeros to the right of the digit. "
-                "There were no zeros for a long time.",
-                "'Whose paintings are these?' he asked from the doorway. 'What huge ones. Yours?'"
-            ]
-        }
+
+    paragraphs2 = [
+        "I decided to face my thirtieth birthday, riding down the highway on a motorcycle.",
+        "I love all kinds of symbolism. I mean, when life rhymes. "
+        "It even seems to me that these rhymes can be forged — this is a kind of magic called sympathetic, "
+        "and it's very sympathetic to me. We sort of explain to the thick-assed, clumsy fate "
+        "what we want her to look like, and sometimes she takes the hint.",
+        "But not always, which I'll come back to soon.",
+        "",
+        "Daddy showed up — probably, he sensed that I was thinking about his pasta. "
+        "He even came to my house. At first, I couldn't understand what it was all of a sudden, "
+        "until he said it himself. Thirty years. Well, yeah, the anniversary.",
+        "He didn't notice my birthdays before. But after all, "
+        "a businessman is mainly interested in the zeros to the right of the digit. "
+        "There were no zeros for a long time.",
+        "'Whose paintings are these?' he asked from the doorway. 'What huge ones. Yours?'"
+    ]
+
+    paragraphs = [
+        [
+            "I decided to face my thirtieth birthday, riding down the highway on a motorcycle.",
+            "I love all kinds of symbolism. I mean, when life rhymes. "
+            "It even seems to me that these rhymes can be forged — this is a kind of magic called sympathetic, "
+            "and it's very sympathetic to me. We sort of explain to the thick-assed, clumsy fate "
+            "what we want her to look like, and sometimes she takes the hint.",
+            "But not always, which I'll come back to soon."
+        ],
+        [
+            "Daddy showed up — probably, he sensed that I was thinking about his pasta. "
+            "He even came to my house. At first, I couldn't understand what it was all of a sudden, "
+            "until he said it himself. Thirty years. Well, yeah, the anniversary.",
+            "He didn't notice my birthdays before. But after all, "
+            "a businessman is mainly interested in the zeros to the right of the digit. "
+            "There were no zeros for a long time.",
+            "'Whose paintings are these?' he asked from the doorway. 'What huge ones. Yours?'"
+        ]
     ]
     writer = Fb2Writer(file_name=file_path, images_dir="./images")
-    writer.write(metadata=metadata, chapters=chapters, cover="cover.jpg")
+    writer.set_metadata(metadata)
+    writer.set_paragraphs(paragraphs)
+    writer.write(debug_mode=True, pretty_xml=True)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="FB2 Book readr")
+    parser = argparse.ArgumentParser(description="FB2 Book reader")
     parser.add_argument("--mode", help="Mode of operation", choices=["read", "write"], default="read")
     parser.add_argument("--file-path", help="Path to the FB2 book file")
     parser.add_argument("--images-dir", help="Directory to save the extracted images", default="images")

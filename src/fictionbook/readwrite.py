@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from fictionbook2.writer import Fb2Writer
-from fictionbook2.reader import Fb2Reader
+from fictionbook.writer import Fb2Writer
+from fictionbook.reader import Fb2Reader
 
 
 class Fb2ReadWrite(Fb2Reader, Fb2Writer):

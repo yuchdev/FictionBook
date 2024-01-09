@@ -1,6 +1,6 @@
 import os
 import unittest
-from fictionbook2.reader import Fb2Reader
+from fictionbook.reader import Fb2Reader
 
 
 class Fictionbook2ReaderTest(unittest.TestCase):

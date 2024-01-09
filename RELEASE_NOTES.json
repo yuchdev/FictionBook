@@ -3,7 +3,7 @@
     "download_link": "https://{package_name_dash}.s3.us-east-1.amazonaws.com/packages/{package_name_dash}-{version}-py3-none-any.whl"
   },
   "releases": {
-    "0.1.0": {
+    "1.0.0": {
       "release_notes": [
         "First version of FbReader class",
         "First version of FbWriter class",

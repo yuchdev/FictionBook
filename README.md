@@ -1,3 +1,3 @@
-# FictionBook2
+# FictionBook
 
 FictionBook2 files read and write
