@@ -1,19 +1,35 @@
 # -*- coding: utf-8 -*-
+import base64
 import os
-import xml.etree.ElementTree as et
-from xml.dom.minidom import parseString
 import shutil
 import json
+import xml.etree.ElementTree as et
+from intermediary_format import IntermediaryXmlFormat
 
 
 class Fb2Writer:
 
     def __init__(self, file_name, images_dir):
+        """
+        The book structure is a dictionary that is capable
+        storing sub-dicts and sub-lists.
+        If value is another dictionary, resulting XML structure will have
+        single element with such a name, e.g.
+        <description>...</description>.
+        If value is a list, e.g. "binary": ["image1.jpg", "image2.jpg"],
+        then XML structure will have multiple elements with the same name, e.g.
+        <binary>image1.jpg</binary>
+        <binary>image2.jpg</binary>.
+        :param file_name:
+        :param images_dir:
+        """
         if not file_name.endswith(".fb2"):
             file_name += ".fb2"
         self.file_name = file_name
         self.images_dir = images_dir
-        self.book_structure = {"description": {}, "body": {}}
+        self.book_structure = IntermediaryXmlFormat.from_dict(
+            {"description": {}, "body": {}, "binary": []}
+        )
         self.fiction_book = None
 
     def set_metadata(self, metadata):
@@ -64,8 +80,8 @@ class Fb2Writer:
         :param debug_mode: If true, create XML and JSON files for debugging
         :param pretty_xml: If true, create a pretty XML structure inside the FB2 file
         """
-
         # Create root element
+        # TODO: replace self.fiction_book with IntermediaryXmlFormat
         self.fiction_book = et.Element("FictionBook", attrib={
             "xmlns": "http://www.gribuser.ru/xml/fictionbook/2.0",
             "xmlns:l": "http://www.w3.org/1999/xlink"
@@ -122,6 +138,18 @@ class Fb2Writer:
             print("The book title is missing")
             return False
         return True
+
+    def _encode_images(self):
+        """
+        Encode images from the images directory to base64 and add them to the book structure
+        """
+        for filename in os.listdir(self.images_dir):
+            if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
+                image_path = os.path.join(self.images_dir, filename)
+                with open(image_path, 'rb') as image_file:
+                    image_data = image_file.read()
+                    image_data_base64 = base64.b64encode(image_data).decode('utf-8')
+                    self.book_structure["binary"].append(image_data_base64)
 
     def _to_xml(self, properties, parent_elem):
         for key, value in properties.items():
