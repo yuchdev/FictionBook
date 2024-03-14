@@ -4,7 +4,9 @@ import os
 import shutil
 import json
 import xml.etree.ElementTree as et
-from intermediary_format import IntermediaryXmlFormat
+from xml.dom.minidom import parseString
+
+from fictionbook.intermediary_format import IntermediaryXmlFormat
 
 
 class Fb2Writer:
@@ -27,9 +29,7 @@ class Fb2Writer:
             file_name += ".fb2"
         self.file_name = file_name
         self.images_dir = images_dir
-        self.book_structure = IntermediaryXmlFormat.from_dict(
-            {"description": {}, "body": {}, "binary": []}
-        )
+        self.book_structure = {"description": {}, "body": {}, "binary": []}
         self.fiction_book = None
 
     def set_metadata(self, metadata):
@@ -143,10 +143,12 @@ class Fb2Writer:
         """
         Encode images from the images directory to base64 and add them to the book structure
         """
+        print(f'Encoding images... from {os.path.abspath(self.images_dir)}')
         for filename in os.listdir(self.images_dir):
             if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
                 image_path = os.path.join(self.images_dir, filename)
                 with open(image_path, 'rb') as image_file:
+                    print(f'Encoding {filename}...')
                     image_data = image_file.read()
                     image_data_base64 = base64.b64encode(image_data).decode('utf-8')
                     self.book_structure["binary"].append(image_data_base64)

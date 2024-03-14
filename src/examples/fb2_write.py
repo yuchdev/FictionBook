@@ -4,20 +4,6 @@ import argparse
 import json
 
 from fictionbook.writer import Fb2Writer
-from fictionbook.reader import Fb2Reader
-
-
-def reader_example(file_path):
-    # Example usage:
-    reader = Fb2Reader(file_path, images_dir='./images')
-
-    # Access extracted data
-    print("Metadata: ", reader.metadata)
-    print("Cover Image: ", reader.cover)
-    print("Total chapters: ", len(reader.paragraphs))
-
-    # Length of paragraphs may be different from the length of subchapters
-    print("Total paragraphs: ", len(reader.paragraphs))
 
 
 def writer_example(file_path):
@@ -51,19 +37,13 @@ def writer_example(file_path):
 
 def main():
     parser = argparse.ArgumentParser(description="FB2 Book reader")
-    parser.add_argument("--mode", help="Mode of operation", choices=["read", "write"], default="read")
     parser.add_argument("--file-path", help="Path to the FB2 book file")
     parser.add_argument("--images-dir", help="Directory to save the extracted images", default="images")
     args = parser.parse_args()
 
     file_path = args.file_path
-    if args.mode == "read":
-        print(f"Reading {file_path}")
-        reader_example(file_path)
-    elif args.mode == "write":
-        print(f"Writing {file_path}")
-        writer_example(file_path)
-
+    print(f"Writing {file_path}")
+    writer_example(file_path)
     return 0
 
 
