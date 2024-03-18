@@ -6,6 +6,41 @@ class IntermediaryXmlFormat:
     """
     Intermediary format for storing book data
     Can be serialized and deserialized to/from XML or JSON
+
+    Examples:
+    1. Intermediary format of paragraph with id=1 and no children:
+    XML:
+        <p id="1">Paragraph Text</p>
+    JSON:
+        {
+            "tag": "p",
+            "attributes": {"id": "1"},
+            "text": "Paragraph Text"
+        }
+
+    2.  Intermediary format of section with id=1 and children (2 paragraphs):
+    XML:
+        <section id="1">
+            <p id="1">Paragraph 1</p>
+            <p id="2">Paragraph 2</p>
+        </section>
+    JSON:
+        {
+            "tag": "section",
+            "attributes": {"id": "1"},
+            "children": [
+                {
+                    "tag": "p",
+                    "attributes": {"id": "1"},
+                    "text": "Paragraph 1"
+                },
+                {
+                    "tag": "p",
+                    "attributes": {"id": "2"},
+                    "text": "Paragraph 2"
+                }
+            ]
+        }
     """
 
     def __init__(self, tag_name, attributes=None, children=None, text=None):
@@ -21,6 +56,20 @@ class IntermediaryXmlFormat:
         self.attributes = attributes or {}
         self.children = children or []
         self.text = text
+
+    def __repr__(self):
+        """
+        XML representation of the object
+        :return: XML string
+        """
+        return self.to_xml()
+
+    def __str__(self):
+        """
+        XML representation of the object
+        :return: XML string
+        """
+        return self.to_xml()
 
     def add_child(self, child):
         """
@@ -57,20 +106,6 @@ class IntermediaryXmlFormat:
         """
         self.text = text
 
-    def __repr__(self):
-        """
-        XML representation of the object
-        :return: XML string
-        """
-        return self.to_xml()
-
-    def __str__(self):
-        """
-        XML representation of the object
-        :return: XML string
-        """
-        return self.to_xml()
-
     def to_xml(self):
         """
         Convert the object to XML string
@@ -89,10 +124,14 @@ class IntermediaryXmlFormat:
         Warning: we lose attributes while converting to JSON
         :return: Python dictionary
         """
+        result = {
+                "tag": self.tag_name,
+                "attributes": self.attributes,
+                "text": self.text
+            }
         if self.children:
-            return {self.tag_name: [child.to_dict() for child in self.children]}
-        else:
-            return {self.tag_name: self.text}
+            result["children"] = [child.to_dict() for child in self.children]
+        return result
 
     def to_json(self):
         """

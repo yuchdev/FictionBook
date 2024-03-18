@@ -10,11 +10,9 @@ def reader_example(file_path):
 
     # Access extracted data
     print("Metadata: ", reader.metadata)
+    print("Body: ", reader.body)
     print("Cover Image: ", reader.cover)
-    print("Total chapters: ", len(reader.paragraphs))
-
-    # Length of paragraphs may be different from the length of subchapters
-    print("Total paragraphs: ", len(reader.paragraphs))
+    print("Total paragraphs: ", len(reader.body))
 
 
 def main():

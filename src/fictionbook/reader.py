@@ -5,6 +5,8 @@ import urllib.request
 import urllib.error
 from xml.etree.ElementTree import parse
 
+from fictionbook.intermediary_format import IntermediaryXmlFormat
+
 
 class Fb2Reader:
     """
@@ -23,7 +25,7 @@ class Fb2Reader:
         self.file_path = file_path
         self.images_dir = images_dir
         self.metadata = {}
-        self.paragraphs = []
+        self.body = {}
         self.cover_image = None
         if not os.path.isdir(self.images_dir):
             os.mkdir(self.images_dir)
@@ -37,34 +39,31 @@ class Fb2Reader:
     def images(self):
         return [os.path.join(self.images_dir, image) for image in os.listdir(self.images_dir)]
 
+    @property
+    def paragraphs(self):
+        """
+        Collect all paragraphs from the body
+        Iterate body recursively and collect all paragraphs
+        :return: list of paragraphs
+        """
+        paragraphs = []
+
+        def collect_paragraphs(chapters):
+            for chapter in chapters:
+                for paragraph in chapter:
+                    paragraphs.append(paragraph)
+
+        collect_paragraphs(self.body)
+        return paragraphs
+
     def _read(self, download_images=False):
         tree = parse(self.file_path)
         root = tree.getroot()
 
         self._extract_metadata(root)
-        chapters = self._extract_paragraphs(root)
-        paragraphs = self._chapters_to_list(chapters)
         self._extract_images(root)
         if download_images:
             self._download_images(root)
-
-    def _chapters_to_list(self, chapters):
-        """
-        Convert list of XML paragraphs to a list of JSON paragraphs (list of strings ended with EOL)
-        :return: list of paragraphs
-        """
-        if not isinstance(chapters, list):
-            raise TypeError("chapters must be a list")
-        paragraphs = []
-        for chapter in chapters:
-            if isinstance(chapter, list):
-                # If the chapter is a list, it contains subchapters, so recursively process it
-                subchapter_paragraphs = self._chapters_to_list(chapters=chapter)
-                paragraphs.extend(subchapter_paragraphs)
-            elif isinstance(chapter, str):
-                # If the chapter is a string, it's a leaf node (paragraph)
-                paragraphs.append(chapter)
-        return paragraphs
 
     def _extract_metadata(self, root):
         """
@@ -84,21 +83,34 @@ class Fb2Reader:
         :return:
         """
         for elem in parent_elem:
+            tag = elem.tag.split("}")[1] if '}' in elem.tag else elem.tag
             if len(elem) > 0:
                 # Recursively set nested properties
                 sub_dict = {}
-                # Set current property with the correct namespace
-                tag = elem.tag.split("}")[1] if '}' in elem.tag else elem.tag
                 metadata_dict[tag] = sub_dict
                 self._extract_metadata_properties(elem, sub_dict)
             else:
-                # Set current property with the correct namespace
-                tag = elem.tag.split("}")[1] if '}' in elem.tag else elem.tag
-                metadata_dict[tag] = elem.text.strip() if elem.text else ""
+                metadata_dict[tag] = {
+                    "tag": tag,
+                    "attributes": elem.attrib,
+                    "text": elem.text.strip() if elem.text else ""
+                }
 
             # Handle cover image
             if elem.tag.endswith("coverpage"):
                 self._extract_cover(elem)
+
+    def _extract_body(self, root):
+        body_tag = root.find(".//{http://www.gribuser.ru/xml/fictionbook/2.0}body")
+        self.body = self._create_intermediary_format(body_tag)
+
+    def _create_intermediary_format(self, element):
+        tag_name = element.tag.split("}")[1] if '}' in element.tag else element.tag
+        attributes = element.attrib
+        text = element.text.strip() if element.text else ""
+        print(f'DEBUG tag_name={tag_name}, attributes={attributes}, text={text}')
+        children = [self._create_intermediary_format(child) for child in element]
+        return IntermediaryXmlFormat(tag_name, attributes, children, text)
 
     def _extract_cover(self, elem):
         """
@@ -108,17 +120,6 @@ class Fb2Reader:
             if (href_attr := image_elem.attrib.get("{http://www.w3.org/1999/xlink}href")) is not None:
                 # Remove the # character
                 self.cover_image = href_attr[1:]
-
-    def _extract_paragraphs(self, root):
-        chapters = []
-        body_tag = root.find(".//{http://www.gribuser.ru/xml/fictionbook/2.0}body")
-        for section_tag in body_tag.findall(".//{http://www.gribuser.ru/xml/fictionbook/2.0}section"):
-            chapter = []
-            for p_tag in section_tag.findall(".//{http://www.gribuser.ru/xml/fictionbook/2.0}p"):
-                paragraph = p_tag.text.strip() if p_tag.text else ""
-                chapter.append(paragraph)
-            chapters.append(chapter)
-        return chapters
 
     def _extract_images(self, root):
         binary_elements = root.findall(".//{http://www.gribuser.ru/xml/fictionbook/2.0}binary")
