@@ -9,16 +9,23 @@ def reader_example(file_path):
     reader = Fb2Reader(file_path, images_dir='./images')
 
     # Access extracted data
-    print("Metadata: ", reader.metadata)
-    print("Body: ", reader.body)
-    print("Cover Image: ", reader.cover)
-    print("Total paragraphs: ", len(reader.body))
+    print(f"Metadata:\n{reader.metadata}")
+    print(f"Number of paragraphs: {len(reader.paragraphs)}")
+    print(f"Cover image: {reader.cover}")
+    if len(reader.paragraphs) < 10:
+        print(f"Structure of body:\n{reader.body.to_yaml()}")
+    print(f"Images:\n{reader.images}")
 
 
 def main():
     parser = argparse.ArgumentParser(description="FB2 Book reader")
-    parser.add_argument("--file-path", help="Path to the FB2 book file")
-    parser.add_argument("--images-dir", help="Directory to save the extracted images", default="images")
+    parser.add_argument("--file-path",
+                        required=True,
+                        help="Path to the FB2 book file")
+    parser.add_argument("--images-dir",
+                        required=False,
+                        default="images",
+                        help="Directory to save the extracted images")
     args = parser.parse_args()
 
     file_path = args.file_path

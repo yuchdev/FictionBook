@@ -66,10 +66,10 @@ class IntermediaryXmlFormat:
 
     def __str__(self):
         """
-        XML representation of the object
+        Pretty XML representation of the object
         :return: XML string
         """
-        return self.to_xml()
+        return self.to_pretty_xml()
 
     def add_child(self, child):
         """
@@ -118,6 +118,13 @@ class IntermediaryXmlFormat:
         text_str = self.text or ''
         return f"{opening_tag}{text_str}{children_str}{closing_tag}"
 
+    def to_pretty_xml(self):
+        """
+        Convert the object to pretty XML string
+        :return: formatted XML string
+        """
+        return self._to_pretty(indent=0, is_root=True)
+
     def to_dict(self):
         """
         Convert the object to Python dictionary
@@ -125,20 +132,68 @@ class IntermediaryXmlFormat:
         :return: Python dictionary
         """
         result = {
-                "tag": self.tag_name,
-                "attributes": self.attributes,
-                "text": self.text
-            }
+            "tag": self.tag_name,
+            "attributes": self.attributes,
+            "text": self.text
+        }
         if self.children:
             result["children"] = [child.to_dict() for child in self.children]
         return result
 
     def to_json(self):
         """
-        Convert the object to JSON string
+        Convert the object to pretty JSON string
         :return: JSON string
         """
-        return json.dumps(self.to_dict())
+        return json.dumps(self.to_dict(), indent=2)
+
+    def to_yaml(self, indent=0):
+        """
+        Return the structure of the object in YAML format
+        :param indent: number of spaces for indentation
+        :return: YAML representation of the object structure
+        """
+        indent_str = ' ' * indent
+        result = f"{indent_str}{self.tag_name}\n"
+        for child in self.children:
+            result += child.to_yaml(indent + 2)
+        return result
+
+    def filter_tag(self, tag_name):
+        """
+        Collect all elements with the specified tag name from the object
+        Iterate recursively and collect all elements
+        :param tag_name: the tag name of the elements to collect
+        :return: list of references to IntermediaryXmlFormat objects
+        """
+        result = []
+        if self.tag_name == tag_name:
+            result.append(self)
+
+        for child in self.children:
+            result.extend(child.filter_tag(tag_name))
+
+        return result
+
+    def _to_pretty(self, indent=0, is_root=True):
+        """
+        Internal method to convert the object to pretty XML string
+        :param indent: number of spaces for indentation
+        :param is_root: whether the current object is the root of the XML document
+        :return: pretty XML string
+        """
+        attributes_str = ' '.join([f'{key}="{value}"' for key, value in self.attributes.items()])
+        opening_tag = f'<{self.tag_name} {attributes_str}>' if attributes_str else f'<{self.tag_name}>'
+        closing_tag = f'</{self.tag_name}>'
+
+        # noinspection PyProtectedMember
+        children_str = ''.join(child._to_pretty(indent + 2, False) for child in self.children)
+        text_str = self.text or ''
+        indent_str = ' ' * indent if not is_root else ''
+        if self.children:
+            return f"{indent_str}{opening_tag}\n{text_str}{children_str}{indent_str}{closing_tag}\n"
+        else:
+            return f"{indent_str}{opening_tag}{text_str}{closing_tag}\n"
 
     @classmethod
     def from_xml(cls, xml_str):

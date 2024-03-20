@@ -24,8 +24,8 @@ class Fb2Reader:
             raise TypeError("images_dir must be a string")
         self.file_path = file_path
         self.images_dir = images_dir
-        self.metadata = {}
-        self.body = {}
+        self.metadata = None
+        self.body = None
         self.cover_image = None
         if not os.path.isdir(self.images_dir):
             os.mkdir(self.images_dir)
@@ -46,82 +46,40 @@ class Fb2Reader:
         Iterate body recursively and collect all paragraphs
         :return: list of paragraphs
         """
-        paragraphs = []
-
-        def collect_paragraphs(chapters):
-            for chapter in chapters:
-                for paragraph in chapter:
-                    paragraphs.append(paragraph)
-
-        collect_paragraphs(self.body)
-        return paragraphs
+        return [paragraph.text for paragraph in self.body.filter_tag('p')] if self.body else []
 
     def _read(self, download_images=False):
         tree = parse(self.file_path)
         root = tree.getroot()
 
         self._extract_metadata(root)
-        self._extract_images(root)
+        self._extract_body(root)
+        self._extract_binary(root)
         if download_images:
             self._download_images(root)
 
     def _extract_metadata(self, root):
         """
-        Extract metadata ('description' tag) from the root element
+        Extract metadata ('description' tag) recursively from the root element
         :param root: xml.etree.ElementTree.Element pointing to the root element of metadata
         """
         description_tag = root.find(".//{http://www.gribuser.ru/xml/fictionbook/2.0}description")
-
-        # Extract metadata properties recursively
-        self._extract_metadata_properties(description_tag, self.metadata)
-
-    def _extract_metadata_properties(self, parent_elem, metadata_dict):
-        """
-        Convert metadata properties recursively from xml.etree.ElementTree.Element to dict
-        :param parent_elem: xml.etree.ElementTree.Element pointing to the parent element of metadata
-        :param metadata_dict: Dictionary to store metadata properties
-        :return:
-        """
-        for elem in parent_elem:
-            tag = elem.tag.split("}")[1] if '}' in elem.tag else elem.tag
-            if len(elem) > 0:
-                # Recursively set nested properties
-                sub_dict = {}
-                metadata_dict[tag] = sub_dict
-                self._extract_metadata_properties(elem, sub_dict)
-            else:
-                metadata_dict[tag] = {
-                    "tag": tag,
-                    "attributes": elem.attrib,
-                    "text": elem.text.strip() if elem.text else ""
-                }
-
-            # Handle cover image
-            if elem.tag.endswith("coverpage"):
-                self._extract_cover(elem)
+        self.metadata = self._to_intermediary_format(element=description_tag)
+        self.cover_image = self._extract_cover()
 
     def _extract_body(self, root):
+        """
+        Extract body recursively from the root element
+        :param root:  xml.etree.ElementTree.Element pointing to the root element of metadata
+        """
         body_tag = root.find(".//{http://www.gribuser.ru/xml/fictionbook/2.0}body")
-        self.body = self._create_intermediary_format(body_tag)
+        self.body = self._to_intermediary_format(body_tag)
 
-    def _create_intermediary_format(self, element):
-        tag_name = element.tag.split("}")[1] if '}' in element.tag else element.tag
-        attributes = element.attrib
-        text = element.text.strip() if element.text else ""
-        print(f'DEBUG tag_name={tag_name}, attributes={attributes}, text={text}')
-        children = [self._create_intermediary_format(child) for child in element]
-        return IntermediaryXmlFormat(tag_name, attributes, children, text)
-
-    def _extract_cover(self, elem):
+    def _extract_binary(self, root):
         """
-        Find the image element directly within the coverpage
+        Extract all <binary> elements from root
+        :param root:
         """
-        if (image_elem := elem.find(".//{http://www.gribuser.ru/xml/fictionbook/2.0}image")) is not None:
-            if (href_attr := image_elem.attrib.get("{http://www.w3.org/1999/xlink}href")) is not None:
-                # Remove the # character
-                self.cover_image = href_attr[1:]
-
-    def _extract_images(self, root):
         binary_elements = root.findall(".//{http://www.gribuser.ru/xml/fictionbook/2.0}binary")
         for binary_elem in binary_elements:
             content_type = binary_elem.attrib.get("content-type", "")
@@ -129,20 +87,46 @@ class Fb2Reader:
             image_id = binary_elem.attrib.get("id", "")
 
             if image_data and image_id and content_type.startswith("image/"):
-                # Save binary images using the specified id
-                self._save_image_from_binary(image_data, content_type, image_id)
+                self._save_image(image_data, content_type, image_id)
 
-    def _save_image_from_binary(self, image_data, content_type, image_id):
-        image_extension = content_type.split("/")[-1]
-        image_name, ext = os.path.splitext(image_id)
+    def _to_intermediary_format(self, element):
+        """
+        Convert xml.etree.ElementTree.Element to IntermediaryXmlFormat
+        :param element: xml.etree.ElementTree.Element pointing to the parent element
+        :return: IntermediaryXmlFormat object
+        """
+        # Clean up tag name from namespace prefix
+        tag_name = element.tag.split("}")[1] if '}' in element.tag else element.tag
 
-        if not ext:
-            ext = f".{image_extension.lower()}"
+        # Clean up attribute keys from namespace prefixes
+        attributes = {key.split("}")[1] if '}' in key else key: value for key, value in element.attrib.items()}
 
-        image_path = os.path.abspath(os.path.join(self.images_dir, image_name + ext))
+        text = element.text.strip() if element.text else ""
+        children = []
+        if len(element) > 0:
+            # Recursively set nested properties
+            for child in element:
+                children.append(self._to_intermediary_format(child))
+        return IntermediaryXmlFormat(tag_name, attributes, children, text)
 
-        with open(image_path, 'wb') as image_file:
-            image_file.write(base64.b64decode(image_data))
+    def _extract_cover(self):
+        """
+        Find the first coverpage element, extract first image element and get the href attribute
+        Trim '#' prefix if present
+        """
+        coverpage = self.metadata.filter_tag('coverpage')
+        if len(coverpage) == 0:
+            return None
+
+        cover_images = coverpage[0].filter_tag('image')
+        if len(cover_images) == 0:
+            return None
+        href = cover_images[0].attributes.get('href', None)
+
+        if href and href.startswith('#'):
+            # Trim '#' prefix
+            href = href[1:]
+        return href
 
     def _download_images(self, root):
         """
@@ -171,3 +155,17 @@ class Fb2Reader:
                         image_file.write(response.read())
         except urllib.error.URLError as e:
             print(f"Error downloading image from {image_url}: {e}")
+
+    def _save_image(self, image_data, content_type, image_id):
+        image_extension = content_type.split("/")[-1]
+        image_name, ext = os.path.splitext(image_id)
+
+        if not ext:
+            ext = f".{image_extension.lower()}"
+
+        image_path = os.path.abspath(os.path.join(self.images_dir, image_name + ext))
+
+        with open(image_path, 'wb') as image_file:
+            image_file.write(base64.b64decode(image_data))
+
+        self.images.append(image_path)
