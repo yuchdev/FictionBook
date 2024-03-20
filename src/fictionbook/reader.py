@@ -24,6 +24,7 @@ class Fb2Reader:
             raise TypeError("images_dir must be a string")
         self.file_path = file_path
         self.images_dir = images_dir
+        self.root = None
         self.metadata = None
         self.body = None
         self.cover_image = None
@@ -51,43 +52,40 @@ class Fb2Reader:
     def _read(self, download_images=False):
         tree = parse(self.file_path)
         root = tree.getroot()
+        self.root = self._to_intermediary_format(element=root)
 
-        self._extract_metadata(root)
-        self._extract_body(root)
-        self._extract_binary(root)
+        self._extract_metadata()
+        self._extract_body()
+        self._extract_binary()
         if download_images:
             self._download_images(root)
 
-    def _extract_metadata(self, root):
+    def _extract_metadata(self):
         """
         Extract metadata ('description' tag) recursively from the root element
-        :param root: xml.etree.ElementTree.Element pointing to the root element of metadata
         """
-        description_tag = root.find(".//{http://www.gribuser.ru/xml/fictionbook/2.0}description")
-        self.metadata = self._to_intermediary_format(element=description_tag)
+        self.metadata = self.root.filter_tag('description')[0]
+        assert self.metadata, "Metadata not found"
         self.cover_image = self._extract_cover()
 
-    def _extract_body(self, root):
+    def _extract_body(self):
         """
         Extract body recursively from the root element
-        :param root:  xml.etree.ElementTree.Element pointing to the root element of metadata
         """
-        body_tag = root.find(".//{http://www.gribuser.ru/xml/fictionbook/2.0}body")
-        self.body = self._to_intermediary_format(body_tag)
+        self.body = self.root.filter_tag('body')[0]
+        assert self.body, "Body not found"
 
-    def _extract_binary(self, root):
+    def _extract_binary(self):
         """
         Extract all <binary> elements from root
-        :param root:
         """
-        binary_elements = root.findall(".//{http://www.gribuser.ru/xml/fictionbook/2.0}binary")
-        for binary_elem in binary_elements:
-            content_type = binary_elem.attrib.get("content-type", "")
-            image_data = binary_elem.text.strip() if binary_elem.text else ""
-            image_id = binary_elem.attrib.get("id", "")
-
-            if image_data and image_id and content_type.startswith("image/"):
-                self._save_image(image_data, content_type, image_id)
+        binary_elements = self.root.filter_tag('binary')
+        for binary in binary_elements:
+            binary_id = binary.attributes.get('id', None)
+            binary_content = binary.text
+            binary_content_type = binary.attributes.get('content-type', None)
+            if binary_id and binary:
+                self._save_image(binary_content, binary_content_type, binary_id)
 
     def _to_intermediary_format(self, element):
         """
@@ -103,8 +101,8 @@ class Fb2Reader:
 
         text = element.text.strip() if element.text else ""
         children = []
+        # Recursively set nested properties
         if len(element) > 0:
-            # Recursively set nested properties
             for child in element:
                 children.append(self._to_intermediary_format(child))
         return IntermediaryXmlFormat(tag_name, attributes, children, text)
@@ -121,10 +119,10 @@ class Fb2Reader:
         cover_images = coverpage[0].filter_tag('image')
         if len(cover_images) == 0:
             return None
-        href = cover_images[0].attributes.get('href', None)
 
+        # Get href and trim '#' prefix
+        href = cover_images[0].attributes.get('href', None)
         if href and href.startswith('#'):
-            # Trim '#' prefix
             href = href[1:]
         return href
 
