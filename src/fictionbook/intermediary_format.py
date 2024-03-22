@@ -71,6 +71,46 @@ class IntermediaryXmlFormat:
         """
         return self.to_pretty_xml()
 
+    def __eq__(self, other):
+        """
+        Compare two IntermediaryXmlFormat objects for equality
+        :param other: Another IntermediaryXmlFormat object to compare with
+        :return: True if both objects are equal, False otherwise
+        """
+        if not isinstance(other, IntermediaryXmlFormat):
+            return False
+
+        # Check if tag names are equal
+        if self.tag_name != other.tag_name:
+            return False
+
+        # Check if attributes are equal
+        if self.attributes != other.attributes:
+            return False
+
+        # Check if text is equal
+        if self.text != other.text:
+            return False
+
+        # Check if number of children is equal
+        if len(self.children) != len(other.children):
+            return False
+
+        # Recursively check if each child is equal
+        for self_child, other_child in zip(self.children, other.children):
+            if self_child != other_child:
+                return False
+
+        return True
+
+    def __ne__(self, other):
+        """
+        Compare two IntermediaryXmlFormat objects for inequality
+        :param other: Another IntermediaryXmlFormat object to compare with
+        :return: True if both objects are not equal, False otherwise
+        """
+        return not self.__eq__(other)
+
     def add_child(self, child):
         """
         Add a child object to the current object
@@ -80,6 +120,7 @@ class IntermediaryXmlFormat:
         </section>
         :param child: IntermediaryXmlFormat object
         """
+        assert isinstance(child, IntermediaryXmlFormat), f"child must be IntermediaryXmlFormat, not {type(child)}"
         self.children.append(child)
 
     def add_children(self, children):
@@ -87,6 +128,9 @@ class IntermediaryXmlFormat:
         Add multiple child objects to the current object
         :param children: list of IntermediaryXmlFormat objects
         """
+        assert isinstance(children, list), f"children must be list, not {type(children)}"
+        for child in children:
+            assert isinstance(child, IntermediaryXmlFormat), f"child must be IntermediaryXmlFormat, not {type(child)}"
         self.children.extend(children)
 
     def add_attribute(self, key, value):
@@ -211,53 +255,40 @@ class IntermediaryXmlFormat:
         Created format looks like IntermediaryXmlFormat without attributes
         (attributes are not supported in JSON)
 
-        Example JSON:
-        {
-            "description": {
-                "title-info": {
-                    "book-title": "Title",
-                    "author": "Author"
-                }
-            },
-            "body": {
-                "section": [
-                    {
-                        "title": "Title",
-                        "p": "Paragraph"
-                    }
-                ]
-            }
-        }
-
-        Resulting intermediary format:
-        <description>
-            <title-info>
-                <book-title>Title</book-title>
-                <author>Author</author>
-            </title-info>
-            <body>
-                <section>
-                    <title>Title</title>
-                    <p>Paragraph</p>
-                </section>
-            </body>
-        </description>
-
         :param json_dict: JSON as a dictionary
         :return: IntermediaryXmlFormat object
         """
         tag_name, data = list(json_dict.items())[0]
-        children = [IntermediaryXmlFormat.from_dict(child) for child in data]
-        return cls(tag_name, children=children)
+        children = []
+        text = None
+        if isinstance(data, dict):
+            for child_tag, child_data in data.items():
+                if isinstance(child_data, list):
+                    list_children = []
+                    for item in child_data:
+                        if isinstance(item, dict):
+                            list_children.append(cls.from_dict(item))
+                        else:
+                            list_children.append(cls(child_tag, text=str(item)))
+                    children.append(cls(child_tag, children=list_children))
+                elif isinstance(child_data, dict):
+                    children.append(cls.from_dict({child_tag: child_data}))
+                else:
+                    children.append(cls(child_tag, text=str(child_data)))
+        elif isinstance(data, list):
+            for item in data:
+                if isinstance(item, dict):
+                    children.extend(cls.from_dict(item).children)
+                else:
+                    children.append(cls(tag_name, text=str(item)))
+        elif isinstance(data, str):
+            text = data
+        elif data is None:
+            return cls(tag_name, children=children, text=text)
+        else:
+            raise TypeError(f"Unsupported data type: {type(data)}")
 
-    @classmethod
-    def from_json(cls, json_str):
-        """
-        Create IntermediaryXmlFormat object from JSON string
-        :param json_str: JSON string
-        """
-        json_dict = json.loads(json_str)
-        return cls.from_dict(json_dict)
+        return cls(tag_name, children=children, text=text)
 
     @classmethod
     def _from_element(cls, element):
@@ -266,5 +297,8 @@ class IntermediaryXmlFormat:
         :param element: XML element
         :return: IntermediaryXmlFormat object
         """
+        tag_name = element.tag.split("}")[1] if '}' in element.tag else element.tag
+        attributes = element.attrib
+        text = element.text.strip() if element.text else ""
         children = [cls._from_element(child) for child in element]
-        return cls(element.tag, children=children)
+        return cls(tag_name, attributes, children, text)

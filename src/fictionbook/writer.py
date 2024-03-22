@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-import base64
 import os
 import shutil
 import json
 import xml.etree.ElementTree as et
+from base64 import b64encode
 
 from fictionbook.intermediary_format import IntermediaryXmlFormat
 
@@ -54,8 +54,9 @@ class Fb2Writer:
         if "book-title" not in title_info_data or "author" not in title_info_data:
             raise ValueError("Both 'book-title' and 'author' are required in title-info")
 
-        self.metadata = self.root.filter_tag("description")[0]
-        self.metadata = IntermediaryXmlFormat.from_dict(metadata)
+        interim = IntermediaryXmlFormat.from_dict(metadata)
+        self.root.add_child(interim)
+        self.metadata = interim
 
     def set_paragraphs(self, paragraphs):
         """
@@ -84,7 +85,12 @@ class Fb2Writer:
             for paragraph in paragraphs:
                 body["section"].append({"p": paragraph})
 
-        self.body = IntermediaryXmlFormat.from_dict(body)
+        print("BODY: ", body)
+        intermediate_xml = IntermediaryXmlFormat.from_dict(body)
+        print("INTERMEDIATE XML", intermediate_xml.to_dict())
+
+        self.root.add_child(intermediate_xml)
+        self.body = body
 
     def set_body(self, body):
         """
@@ -147,19 +153,21 @@ class Fb2Writer:
         """
         Encode images from the images directory to base64 and add them to the book structure
         """
-        print(f'Encoding images... from {os.path.abspath(self.images_dir)}')
+        self.images_dir = os.path.abspath(self.images_dir)
+        assert os.path.isdir(self.images_dir), "Images directory does not exist"
+        print(f'Encoding images... from {self.images_dir}')
+
         for filename in os.listdir(self.images_dir):
             ext = filename.split('.')[-1]
-            if ext in ['jpg', 'jpeg', 'png', 'gif']:
+            if ext in ['jpg', 'jpeg', 'png', 'bmp', 'gif']:
                 image_path = os.path.join(self.images_dir, filename)
                 with open(image_path, 'rb') as image_file:
                     print(f'Encoding {filename}...')
-                    image_data = image_file.read()
-                    image_data_base64 = base64.b64encode(image_data).decode('utf-8')
+                    image_data = b64encode(image_file.read()).decode('utf-8')
                     image_attributes = {
                         "id": filename,
                         "content-type": f"image/{ext}"
                     }
                     self.root.add_child(
-                        IntermediaryXmlFormat(tag_name="binary", attributes=image_attributes, text=image_data_base64)
+                        IntermediaryXmlFormat(tag_name="binary", attributes=image_attributes, text=image_data)
                     )

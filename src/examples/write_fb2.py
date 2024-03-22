@@ -30,6 +30,7 @@ def writer_example(file_path):
             paragraphs.append(temp_paragraphs)
 
     writer = Fb2Writer(file_name=file_path, images_dir="./images")
+    print(f"metadata={metadata}")
     writer.set_metadata(metadata)
     writer.set_paragraphs(paragraphs)
     writer.write(debug_mode=True, pretty_xml=True)
