@@ -288,8 +288,6 @@ class IntermediaryXmlFormat:
         else:
             raise TypeError(f"Unsupported data type: {type(data)}")
 
-        return cls(tag_name, children=children, text=text)
-
     @classmethod
     def _from_element(cls, element):
         """
