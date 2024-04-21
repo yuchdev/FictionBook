@@ -5,7 +5,7 @@ import urllib.request
 import urllib.error
 from xml.etree.ElementTree import parse
 
-from fictionbook.intermediary_format import IntermediaryXmlFormat
+from fictionbook.intermediary_xml_format import IntermediaryXmlFormat
 
 
 class Fb2Reader:

@@ -30,16 +30,16 @@ HERE = pathlib.Path(__file__).parent
 README = (HERE / "README.md").read_text(encoding='utf8')
 
 # Add possible dependencies here
-DEPENDENCIES = ["pathlib"]
+DEPENDENCIES = ["pathlib", "lxml"]
 
 # Github download link
-GITHUB_URL = "https://github.com/yuchdev/{PACKAGE_NAME}"
+GITHUB_URL = f"https://github.com/yuchdev/{PACKAGE_NAME}"
 
 # Wheel filename, e.g. package_name-1.0.0-py3-none-any.whl
-WHEEL_FILE = f"{PACKAGE_NAME}-{VERSION}-py3-none-any.whl"
+WHEEL_FILE = f"{PACKAGE_NAME_DASH}-{VERSION}-py3-none-any.whl"
 
 # Tarball filename, e.g. package_name-1.0.0.tar.gz
-TARGET_TARBALL = f"{PACKAGE_NAME}-{VERSION}.tar.gz"
+TARGET_TARBALL = f"{PACKAGE_NAME_DASH}-{VERSION}.tar.gz"
 
 # Github download link
 GITHUB_DOWNLOAD = f"{GITHUB_URL}/releases/download/release.{VERSION}/{TARGET_TARBALL}"
@@ -48,7 +48,7 @@ GITHUB_DOWNLOAD = f"{GITHUB_URL}/releases/download/release.{VERSION}/{TARGET_TAR
 AWS_DOWNLOAD = f"https://{PACKAGE_NAME_DASH}.s3.us-east-1.amazonaws.com/packages/{WHEEL_FILE}"
 
 # PyPI project page
-PYPI_URL = f"https://pypi.org/project/{PACKAGE_NAME_DASH}/"
+PYPI_URL = f"https://pypi.org/project/{PACKAGE_NAME}/"
 
 # Issue tracker
 ISSUE_TRACKER = "{github_url}/issues".format(github_url=GITHUB_URL)

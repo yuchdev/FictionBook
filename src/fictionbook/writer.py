@@ -5,7 +5,7 @@ import json
 import xml.etree.ElementTree as et
 from base64 import b64encode
 
-from fictionbook.intermediary_format import IntermediaryXmlFormat
+from fictionbook.intermediary_xml_format import IntermediaryXmlFormat
 
 
 class Fb2Writer:
@@ -54,7 +54,9 @@ class Fb2Writer:
         if "book-title" not in title_info_data or "author" not in title_info_data:
             raise ValueError("Both 'book-title' and 'author' are required in title-info")
 
+        print(f"METADATA 1: {metadata}")
         interim = IntermediaryXmlFormat.from_dict(metadata)
+        print(f"METADATA 2: {interim.to_dict()}")
         self.root.add_child(interim)
         self.metadata = interim
 
