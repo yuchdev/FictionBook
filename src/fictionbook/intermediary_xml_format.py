@@ -1,5 +1,4 @@
 from lxml import etree
-import json
 
 
 class IntermediaryXmlFormat:
@@ -8,6 +7,16 @@ class IntermediaryXmlFormat:
         """
         Initialize the IntermediaryXmlFormat object using lxml elements
         """
+        if tag_name:
+            self.element = etree.Element(tag_name)
+            if attributes:
+                for key, value in attributes.items():
+                    self.element.attrib[key] = value
+            if children:
+                for child in children:
+                    self.element.append(child.element)
+            if text:
+                self.element.text = text
 
     def __repr__(self):
         """

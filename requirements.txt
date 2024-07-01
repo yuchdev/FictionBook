@@ -1,3 +1,6 @@
 pathlib
-lxml
-pypdf
+pypdf~=4.2.0
+setuptools~=70.1.1
+
+xmltodict~=0.13.0
+xmljson~=0.2.1
