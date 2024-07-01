@@ -5,6 +5,10 @@ import xml.etree.ElementTree as et
 
 from xmljson import cobra as cb
 
+__doc__ = """Use xmljson library to convert XML to JSON and vice versa
+https://github.com/sanand0/xmljson
+"""
+
 WORKING_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(WORKING_DIR, "../..", "test", "assets")
 

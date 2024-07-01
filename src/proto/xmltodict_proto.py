@@ -1,8 +1,12 @@
 import os
 import sys
+import argparse
 
 import xmltodict
-import argparse
+
+__doc__ = """Use xmltodict library to convert XML to JSON and vice versa
+https://github.com/martinblech/xmltodict
+"""
 
 WORKING_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(WORKING_DIR, "../..", "test", "assets")
