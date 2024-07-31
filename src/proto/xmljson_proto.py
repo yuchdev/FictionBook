@@ -1,9 +1,6 @@
 import argparse
 import os
 import sys
-import xml.etree.ElementTree as et
-
-from xmljson import cobra as cb
 
 __doc__ = """Use xmljson library to convert XML to JSON and vice versa
 https://github.com/sanand0/xmljson
@@ -15,30 +12,6 @@ ASSETS_DIR = os.path.join(WORKING_DIR, "../..", "test", "assets")
 
 def get_asset_path(file_name):
     return os.path.join(ASSETS_DIR, file_name)
-
-
-def convert_xml_file(file_path) -> dict:
-    """
-    Convert an XML file to a dictionary using xmljson
-    Read XML into xml.etree and serialize it to a dictionary
-    Skip namespaces in XML
-    :param file_path:
-    :return: serialized dictionary
-    """
-    with open(file_path, 'r') as f:
-        xml_root = et.parse(f).getroot()
-        return cb.data(xml_root)
-
-
-def convert_json_file(file_path):
-    """
-    Read JSON file and deserialize it to an XML using xmljson
-    :param file_path:
-    :return:
-    """
-    with open(file_path, 'r') as f:
-        json_content = f.read()
-        return cb.etree(json_content)
 
 
 def main():
