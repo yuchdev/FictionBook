@@ -26,10 +26,11 @@ def process_page_text(page_text, page_number, preserve_references, references_di
     """
     matches = re.findall(r'\b\w+\d\b', page_text)
     for match in matches:
-        ref_pattern = re.compile(r'\b' + re.escape(match[-1]) + r'\w*\b')
-        ref_match = ref_pattern.search(page_text)
-        print(f"Match: {match}, Ref: {ref_match}")
+        # Find the reference text starting with the same number from the end of the page text
+        ref_pattern = re.compile(r'\b' + re.escape(match[-1]) + r' \w+\b')
+        ref_match = ref_pattern.search(page_text[::-1])
         if ref_match:
+            ref_match = ref_pattern.search(page_text, len(page_text) - ref_match.end())
             if preserve_references:
                 position = (page_number, page_text.find(match))
                 references_dict[position] = ref_match.group()
