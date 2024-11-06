@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
-import base64
 import os
+import base64
 import urllib.request
-import urllib.error
-from xml.etree.ElementTree import parse
-
-from fictionbook.intermediary_format import IntermediaryXmlFormat
+import xml.etree.ElementTree as et
 
 
 class Fb2Reader:
@@ -17,6 +14,7 @@ class Fb2Reader:
         """
         :param file_path:
         :param images_dir:
+        :param download_images:
         """
         if not isinstance(file_path, str):
             raise TypeError("file_path must be a string")
@@ -47,98 +45,86 @@ class Fb2Reader:
         Iterate body recursively and collect all paragraphs
         :return: list of paragraphs
         """
-        return [paragraph.text for paragraph in self.body.filter_tag('p')] if self.body else []
+        if self.body is None:
+            return []
+        paragraphs = []
+        for p in self.body.findall('.//{http://www.gribuser.ru/xml/fictionbook/2.0}p'):
+            if p.text:
+                paragraphs.append(p.text.strip())
+        return paragraphs
 
     def _read(self, download_images=False):
-        tree = parse(self.file_path)
-        root = tree.getroot()
-        self.root = self._to_intermediary_format(element=root)
+        tree = et.parse(self.file_path)
+        self.root = tree.getroot()
 
         self._extract_metadata()
         self._extract_body()
         self._extract_binary()
         if download_images:
-            self._download_images(root)
+            self._download_images()
 
     def _extract_metadata(self):
         """
         Extract metadata ('description' tag) recursively from the root element
         """
-        self.metadata = self.root.filter_tag('description')[0]
-        assert self.metadata, "Metadata not found"
+        self.metadata = self.root.find('{http://www.gribuser.ru/xml/fictionbook/2.0}description')
+        if self.metadata is None:
+            raise ValueError("Metadata not found")
         self.cover_image = self._extract_cover()
 
     def _extract_body(self):
         """
         Extract body recursively from the root element
         """
-        self.body = self.root.filter_tag('body')[0]
-        assert self.body, "Body not found"
+        self.body = self.root.find('{http://www.gribuser.ru/xml/fictionbook/2.0}body')
+        if self.body is None:
+            raise ValueError("Body not found")
 
     def _extract_binary(self):
         """
         Extract all <binary> elements from root
         """
-        binary_elements = self.root.filter_tag('binary')
+        binary_elements = self.root.findall('{http://www.gribuser.ru/xml/fictionbook/2.0}binary')
         for binary in binary_elements:
-            binary_id = binary.attributes.get('id', None)
+            binary_id = binary.get('id')
             binary_content = binary.text
-            binary_content_type = binary.attributes.get('content-type', None)
-            if binary_id and binary:
+            binary_content_type = binary.get('content-type')
+            if binary_id and binary_content:
                 self._save_image(binary_content, binary_content_type, binary_id)
-
-    def _to_intermediary_format(self, element):
-        """
-        Convert xml.etree.ElementTree.Element to IntermediaryXmlFormat
-        :param element: xml.etree.ElementTree.Element pointing to the parent element
-        :return: IntermediaryXmlFormat object
-        """
-        # Clean up tag name from namespace prefix
-        tag_name = element.tag.split("}")[1] if '}' in element.tag else element.tag
-
-        # Clean up attribute keys from namespace prefixes
-        attributes = {key.split("}")[1] if '}' in key else key: value for key, value in element.attrib.items()}
-
-        text = element.text.strip() if element.text else ""
-        children = []
-        # Recursively set nested properties
-        if len(element) > 0:
-            for child in element:
-                children.append(self._to_intermediary_format(child))
-        return IntermediaryXmlFormat(tag_name, attributes, children, text)
 
     def _extract_cover(self):
         """
         Find the first coverpage element, extract first image element and get the href attribute
         Trim '#' prefix if present
         """
-        coverpage = self.metadata.filter_tag('coverpage')
-        if len(coverpage) == 0:
+        # Navigate to 'title-info/coverpage/image'
+        title_info = self.metadata.find('{http://www.gribuser.ru/xml/fictionbook/2.0}title-info')
+        if title_info is None:
             return None
-
-        cover_images = coverpage[0].filter_tag('image')
-        if len(cover_images) == 0:
+        coverpage = title_info.find('{http://www.gribuser.ru/xml/fictionbook/2.0}coverpage')
+        if coverpage is None:
             return None
-
-        # Get href and trim '#' prefix
-        href = cover_images[0].attributes.get('href', None)
+        cover_image = coverpage.find('{http://www.gribuser.ru/xml/fictionbook/2.0}image')
+        if cover_image is None:
+            return None
+        href = cover_image.get('{http://www.w3.org/1999/xlink}href')
         if href and href.startswith('#'):
             href = href[1:]
         return href
 
-    def _download_images(self, root):
+    def _download_images(self):
         """
-        Download images from the book if <image l:href="https..."> tag is used
-        and points to URL in the internet
+        Download images from the book if <image l:href="http..."> tag is used
+        and points to a URL on the internet
         Note: Images may repeat so we use set() to avoid duplicates
         """
         images = set()
-        image_elements = root.findall(".//{http://www.gribuser.ru/xml/fictionbook/2.0}image")
+        image_elements = self.root.findall(".//{http://www.gribuser.ru/xml/fictionbook/2.0}image")
         for image_elem in image_elements:
-            href_attr = image_elem.attrib.get("{http://www.w3.org/1999/xlink}href", "")
+            href_attr = image_elem.get('{http://www.w3.org/1999/xlink}href', '')
             if href_attr.startswith("http"):
                 images.add(href_attr)
-        # download images
+        # Download images
         for image_url in images:
             self._download_image(image_url)
 
@@ -166,4 +152,3 @@ class Fb2Reader:
         with open(image_path, 'wb') as image_file:
             image_file.write(base64.b64decode(image_data))
 
-        self.images.append(image_path)

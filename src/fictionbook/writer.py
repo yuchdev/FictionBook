@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
-import base64
 import os
-import shutil
 import json
-import xml.etree.ElementTree as et
-
-from fictionbook.intermediary_format import IntermediaryXmlFormat
+import base64
+from xml.etree.ElementTree import Element, SubElement, ElementTree
 
 
 class Fb2Writer:
@@ -13,12 +10,12 @@ class Fb2Writer:
     def __init__(self, file_name, images_dir):
         """
         The book structure is a dictionary that is capable
-        storing sub-dicts and sub-lists.
-        If value is another dictionary, resulting XML structure will have
-        single element with such a name, e.g.
+        of storing sub-dicts and sub-lists.
+        If a value is another dictionary, the resulting XML structure will have
+        a single element with such a name, e.g.,
         <description>...</description>.
-        If value is a list, e.g. "binary": ["image1.jpg", "image2.jpg"],
-        then XML structure will have multiple elements with the same name, e.g.
+        If a value is a list, e.g., "binary": ["image1.jpg", "image2.jpg"],
+        then the XML structure will have multiple elements with the same name, e.g.,
         <binary>image1.jpg</binary>
         <binary>image2.jpg</binary>.
         :param file_name:
@@ -31,16 +28,39 @@ class Fb2Writer:
         self.metadata = None
         self.body = None
         self.cover_image = None
-        self.root = IntermediaryXmlFormat(
-            tag_name="FictionBook",
-            attributes={
-                "xmlns": "http://www.gribuser.ru/xml/fictionbook/2.0",
-                "xmlns:l": "http://www.w3.org/1999/xlink"
-            },
-            children=[
-                IntermediaryXmlFormat("description"),
-                IntermediaryXmlFormat("body")
-            ])
+
+        # Create root element
+        self.root = Element("FictionBook", attrib={
+            "xmlns": "http://www.gribuser.ru/xml/fictionbook/2.0",
+            "xmlns:l": "http://www.w3.org/1999/xlink"
+        })
+        # Create 'description' and 'body' elements
+        self.description_elem = SubElement(self.root, "description")
+        self.body_elem = SubElement(self.root, "body")
+
+    def dict_to_element(self, parent, data):
+        """
+        Recursively convert a dictionary to XML elements
+        :param parent: parent Element
+        :param data: dictionary
+        """
+        if isinstance(data, dict):
+            for key, value in data.items():
+                if isinstance(value, dict):
+                    child = SubElement(parent, key)
+                    self.dict_to_element(child, value)
+                elif isinstance(value, list):
+                    for item in value:
+                        child = SubElement(parent, key)
+                        self.dict_to_element(child, item)
+                else:
+                    child = SubElement(parent, key)
+                    child.text = str(value)
+        elif isinstance(data, list):
+            for item in data:
+                self.dict_to_element(parent, item)
+        else:
+            parent.text = str(data)
 
     def set_metadata(self, metadata):
         """
@@ -54,8 +74,8 @@ class Fb2Writer:
         if "book-title" not in title_info_data or "author" not in title_info_data:
             raise ValueError("Both 'book-title' and 'author' are required in title-info")
 
-        self.metadata = self.root.filter_tag("description")[0]
-        self.metadata = IntermediaryXmlFormat.from_dict(metadata)
+        self.metadata = self.description_elem  # for clarity
+        self.dict_to_element(self.metadata, metadata)
 
     def set_paragraphs(self, paragraphs):
         """
@@ -65,33 +85,56 @@ class Fb2Writer:
         assert isinstance(paragraphs, list), "paragraphs must be a list"
         assert len(paragraphs) > 0, "paragraphs must not be empty"
 
-        self.body = self.root.filter_tag("body")[0]
+        self.body = self.body_elem
 
-        # Add a section with the book title and subtitle
-        body = {
-            "title": self.metadata.filter_tag("book-title")[0].text,
-            "section": []
-        }
+        # Get book title from metadata
+        book_title_elem = self.metadata.find(".//book-title")
+        if book_title_elem is not None:
+            book_title = book_title_elem.text
+        else:
+            book_title = ""
 
-        # Check if paragraphs is a list of lists (chapters), or just a list of paragraphs
-        # and add an "empty-line" item after each chapter
+        # Add a title to body
+        title_elem = SubElement(self.body, "title")
+        p_elem = SubElement(title_elem, "p")
+        p_elem.text = book_title
+
+        # Add 'section' element
+        section_elem = SubElement(self.body, "section")
+
         if isinstance(paragraphs[0], list):
             for sub_list in paragraphs:
                 for paragraph in sub_list:
-                    body["section"].append({"p": paragraph})
-                body["section"].append({"empty-line": ""})
+                    p_elem = SubElement(section_elem, "p")
+                    p_elem.text = paragraph
+                # Add an empty-line
+                empty_line_elem = SubElement(section_elem, "empty-line")
         else:
             for paragraph in paragraphs:
-                body["section"].append({"p": paragraph})
-
-        self.body = IntermediaryXmlFormat.from_dict(body)
+                p_elem = SubElement(section_elem, "p")
+                p_elem.text = paragraph
 
     def set_body(self, body):
         """
         Advanced method to set the book body without any processing
         :param body: dict
         """
-        self.body = IntermediaryXmlFormat.from_dict(body)
+        # Clear current body element
+        self.body_elem.clear()
+        self.dict_to_element(self.body_elem, body)
+
+    def indent(self, elem, level=0):
+        i = "\n" + level*"  "
+        if len(elem):
+            if not elem.text or not elem.text.strip():
+                elem.text = i + "  "
+            for child in elem:
+                self.indent(child, level+1)
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+        else:
+            if level and (not elem.tail or not elem.tail.strip()):
+                elem.tail = i
 
     def write(self, metadata=None, paragraphs=None, debug_mode=False, pretty_xml=True):
         """
@@ -109,37 +152,58 @@ class Fb2Writer:
         if not self.validate():
             raise ValueError("Invalid book structure")
 
-        xml_str = self.root.to_xml()
-        xml_root = et.fromstring(xml_str)
+        # Handle images
+        self._encode_images()
+
+        if pretty_xml:
+            self.indent(self.root)
 
         # Create XML tree
-        if pretty_xml:
-            with open(self.file_name, 'w', encoding='utf-8') as f:
-                f.write(xml_str)
-        else:
-            tree = et.ElementTree(xml_root)
-            tree.write(self.file_name, encoding='utf-8', xml_declaration=True)
+        tree = ElementTree(self.root)
+        tree.write(self.file_name, encoding='utf-8', xml_declaration=True)
 
         if debug_mode:
             # Create XML and JSON files for debugging
-            shutil.copyfile(self.file_name, self.file_name + '.xml')
+            tree.write(self.file_name + '.xml', encoding='utf-8', xml_declaration=True)
+            # For JSON, we need to convert the XML tree to a dict
+            root_dict = self.element_to_dict(self.root)
             with open(self.file_name + '.json', 'w', encoding='utf-8') as f:
-                json.dump(self.root.to_dict(), f, ensure_ascii=False, indent=4)
+                json.dump(root_dict, f, ensure_ascii=False, indent=4)
+
+    def element_to_dict(self, elem):
+        d = {}
+        if elem.attrib:
+            d["@attributes"] = elem.attrib
+        if elem.text and elem.text.strip():
+            d["#text"] = elem.text.strip()
+        for child in elem:
+            child_dict = self.element_to_dict(child)
+            if child.tag not in d:
+                d[child.tag] = child_dict
+            else:
+                if isinstance(d[child.tag], list):
+                    d[child.tag].append(child_dict)
+                else:
+                    d[child.tag] = [d[child.tag], child_dict]
+        return d
 
     def validate(self):
         """
         Validate the book structure before writing to a file
         Check list:
-        * if the "description" and "body" keys are present in the book_structure dictionary
-        * if the "title-info" and "author" keys are present in the "description" dictionary
-        * if the values of the "title-info" and "author" keys are not empty
+        * if the "description" and "body" elements are present
+        * if the "title-info" and "author" elements are present in the "description" element
+        * if the values of the "title-info" and "author" elements are not empty
         :return: True if valid, False otherwise
         """
-        if not self.metadata or not self.body:
+        if self.metadata is None or self.body is None:
             return False
-        if not self.metadata.filter_tag("title-info") or not self.metadata.filter_tag("author"):
+        title_info = self.metadata.find("title-info")
+        if title_info is None:
             return False
-        if not self.metadata.filter_tag("book-title") or not self.metadata.filter_tag("author"):
+        book_title = title_info.find("book-title")
+        authors = title_info.findall("author")
+        if book_title is None or not authors:
             return False
         return True
 
@@ -147,9 +211,11 @@ class Fb2Writer:
         """
         Encode images from the images directory to base64 and add them to the book structure
         """
+        if not os.path.exists(self.images_dir):
+            return
         print(f'Encoding images... from {os.path.abspath(self.images_dir)}')
         for filename in os.listdir(self.images_dir):
-            ext = filename.split('.')[-1]
+            ext = filename.split('.')[-1].lower()
             if ext in ['jpg', 'jpeg', 'png', 'gif']:
                 image_path = os.path.join(self.images_dir, filename)
                 with open(image_path, 'rb') as image_file:
@@ -160,6 +226,5 @@ class Fb2Writer:
                         "id": filename,
                         "content-type": f"image/{ext}"
                     }
-                    self.root.add_child(
-                        IntermediaryXmlFormat(tag_name="binary", attributes=image_attributes, text=image_data_base64)
-                    )
+                    binary_elem = SubElement(self.root, "binary", attrib=image_attributes)
+                    binary_elem.text = image_data_base64

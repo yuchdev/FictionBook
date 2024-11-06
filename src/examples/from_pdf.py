@@ -7,19 +7,62 @@ from pypdf import PdfReader
 from fictionbook.writer import Fb2Writer
 
 
-def extract_text(file_path):
+import re
+from pypdf import PdfReader
+import json
+
+import re
+from pypdf import PdfReader
+import json
+
+def process_page_text(page_text, page_number, preserve_references, references_dict):
+    """
+    Process the text of a single page to remove or preserve references.
+    :param page_text: Text of the page
+    :param page_number: Page number
+    :param preserve_references: Boolean flag to preserve references
+    :param references_dict: Dictionary to store references if preserve_references is True
+    :return: Processed page text
+    """
+    matches = re.findall(r'\b\w+\d\b', page_text)
+    for match in matches:
+        ref_pattern = re.compile(r'\b' + re.escape(match[-1]) + r'\w*\b')
+        ref_match = ref_pattern.search(page_text)
+        print(f"Match: {match}, Ref: {ref_match}")
+        if ref_match:
+            if preserve_references:
+                position = (page_number, page_text.find(match))
+                references_dict[position] = ref_match.group()
+            # Replace only the reference index with an empty string
+            page_text = page_text.replace(match, match[:-1])
+            page_text = page_text.replace(ref_match.group(), '')
+    return page_text
+
+
+def extract_text(file_path, preserve_references=False):
     """
     Extract text from a PDF file
-    :param file_path:
-    :return:
+    :param file_path: Path to the PDF file
+    :param preserve_references: Boolean flag to preserve references
+    :return: Extracted text without references or references dictionary
     """
     reader = PdfReader(file_path)
     number_of_pages = len(reader.pages)
     print(f"Number of pages: {number_of_pages}")
     text = ""
-    for page in reader.pages:
-        text += page.extract_text()
-    return text
+    references_dict = {}
+
+    for page_number, page in enumerate(reader.pages):
+        page_text = page.extract_text()
+        processed_text = process_page_text(page_text, page_number, preserve_references, references_dict)
+        text += processed_text
+
+    if preserve_references:
+        with open('references.json', 'w', encoding='utf-8') as f:
+            json.dump(references_dict, f, ensure_ascii=False, indent=4)
+        return references_dict
+    else:
+        return text
 
 
 def process_extracted_text(text):
@@ -74,21 +117,21 @@ def main():
     if args.extract_text:
         file_path = args.extract_text
         text = extract_text(file_path)
-        with open(args.output_file, "w") as f:
+        with open(args.output_file, "w", encoding="utf-8") as f:
             f.write(text)
 
     if args.split_paragraphs:
-        with open(args.output_file, "r") as f:
+        with open(args.output_file, "r", encoding="utf-8") as f:
             text = f.read()
             paragraphs = process_extracted_text(text)
             # write list to temp file
-            with open("temp.txt", "w") as f:
+            with open("temp.txt", "w", encoding="utf-8") as f:
                 for paragraph in paragraphs:
                     f.write(paragraph + "\n\n")
 
     if os.path.isfile('temp.txt'):
         # read paragraphs from temp file
-        with open('temp.txt', 'r') as f:
+        with open('temp.txt', 'r', encoding='utf-8') as f:
             paragraphs = f.readlines()
             paragraphs = [p.strip('\n\n') for p in paragraphs]
         # remove empty lines

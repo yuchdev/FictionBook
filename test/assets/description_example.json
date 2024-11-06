@@ -1,0 +1,32 @@
+{
+    "description": {
+        "title-info": {
+            "genre": "prose_contemporary",
+            "author": {
+                "first-name": "Victor",
+                "last-name": "Pelevin",
+                "home-page": "https://example.com"
+            },
+            "book-title": "Sol Invictus Book 1",
+            "annotation": "Sol Invictus Book 1",
+            "keywords": "book, keywords",
+            "date": "2020",
+            "lang": "en"
+        },
+        "document-info": {
+            "author": "Victor Pelevin",
+            "program-used": "Python fictionbook2 library",
+            "date": "2024",
+            "src-url": "https://example.com",
+            "id": "123456789",
+            "version": "1.0"
+        },
+        "publish-info": {
+            "book-name": "Book Name",
+            "publisher": "Publisher",
+            "city": "City",
+            "year": "2024",
+            "isbn": "1234567890"
+        }
+    }
+}
