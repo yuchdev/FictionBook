@@ -1,19 +1,12 @@
-import os.path
+import os
+import re
 import sys
-import argparse
 import json
-from pypdf import PdfReader
+import argparse
 
+from pypdf import PdfReader
 from fictionbook.writer import Fb2Writer
 
-
-import re
-from pypdf import PdfReader
-import json
-
-import re
-from pypdf import PdfReader
-import json
 
 def process_page_text(page_text, page_number, preserve_references, references_dict):
     """
@@ -80,12 +73,12 @@ def process_extracted_text(text):
         # Check if the current character is an end of sentence symbol
         # and the next two characters form the sequence '\n{AnySymbol}'
         if i < len(text) - 2 and text[i] in {'.', '?', '!'} and text[i+1] == '\n' and text[i+2].isprintable():
-            # Add the end of sentence symbol to the paragraph,
-            # then add the paragraph to paragraphs and reset paragraph
             paragraph += text[i]
             paragraphs.append(paragraph)
             paragraph = ""
-            i += 2  # Skip the next two characters
+
+            # Skip the next two characters
+            i += 2
         else:
             # Add the current character to paragraph
             paragraph += text[i]
@@ -125,7 +118,6 @@ def main():
         with open(args.output_file, "r", encoding="utf-8") as f:
             text = f.read()
             paragraphs = process_extracted_text(text)
-            # write list to temp file
             with open("temp.txt", "w", encoding="utf-8") as f:
                 for paragraph in paragraphs:
                     f.write(paragraph + "\n\n")
@@ -137,6 +129,9 @@ def main():
             paragraphs = [p.strip('\n\n') for p in paragraphs]
         # remove empty lines
         paragraphs = [p for p in paragraphs if p]
+    else:
+        print("ERROR: No paragraphs found")
+        return 1
 
     if args.to_fb2:
         writer = Fb2Writer(file_name=args.to_fb2, images_dir="./Invasive_Species")
