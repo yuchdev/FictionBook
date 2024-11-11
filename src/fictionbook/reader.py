@@ -41,16 +41,19 @@ class Fb2Reader:
     @property
     def paragraphs(self):
         """
-        Collect all paragraphs from the body
-        Iterate body recursively and collect all paragraphs
+        Collect all paragraphs from the body.
+        Iterate body recursively and collect all paragraphs, including nested tags.
         :return: list of paragraphs
         """
         if self.body is None:
             return []
+
         paragraphs = []
         for p in self.body.findall('.//{http://www.gribuser.ru/xml/fictionbook/2.0}p'):
-            if p.text:
-                paragraphs.append(p.text.strip())
+            text_content = ''.join(p.itertext())
+            if text_content:
+                paragraphs.append(text_content.strip())
+
         return paragraphs
 
     def _read(self, download_images=False):

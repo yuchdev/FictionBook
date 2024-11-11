@@ -1,4 +1,3 @@
-import os.path
 import sys
 import argparse
 import json
@@ -6,11 +5,8 @@ import json
 from fictionbook.writer import Fb2Writer
 
 
-def writer_example(file_path):
-    asset_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../..", "test", "assets"))
-    test_json = os.path.abspath(os.path.join(asset_dir, "sol_invictus_en.fb2.json"))
-
-    with open(test_json, "r") as f:
+def writer_example(json_content_file, result_file_path):
+    with open(json_content_file, "r") as f:
         data = json.load(f)
         metadata = data["description"]
         body = data["body"]
@@ -29,21 +25,27 @@ def writer_example(file_path):
         if temp_paragraphs:
             paragraphs.append(temp_paragraphs)
 
-    writer = Fb2Writer(file_name=file_path, images_dir="./images")
+    writer = Fb2Writer(file_name=result_file_path, images_dir="./images")
     writer.set_metadata(metadata)
-    writer.set_paragraphs(paragraphs)
+    writer.set_paragraphs(paragraphs, 'plaintext')
     writer.write(debug_mode=True, pretty_xml=True)
 
 
 def main():
     parser = argparse.ArgumentParser(description="FB2 Book reader")
-    parser.add_argument("--file-path", help="Path to the FB2 book file")
-    parser.add_argument("--images-dir", help="Directory to save the extracted images", default="images")
+    parser.add_argument("--input-file",
+                        help="Path to JSON file with the content of the book")
+    parser.add_argument("--output-file",
+                        help="Path to the FB2 book file")
+    parser.add_argument("--images-dir",
+                        help="Directory to save the extracted images",
+                        default="images")
     args = parser.parse_args()
 
-    file_path = args.file_path
-    print(f"Writing {file_path}")
-    writer_example(file_path)
+    input_file = args.input_file
+    output_file = args.output_file
+    print(f"Writing FB2 book from {input_file} to {output_file}")
+    writer_example(json_content_file=input_file, result_file_path=output_file)
     return 0
 
 

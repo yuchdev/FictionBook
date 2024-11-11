@@ -30,7 +30,7 @@ HERE = pathlib.Path(__file__).parent
 README = (HERE / "README.md").read_text(encoding='utf8')
 
 # Add possible dependencies here
-DEPENDENCIES = ["pathlib"]
+DEPENDENCIES = ["markdown2"]
 
 # Github download link
 GITHUB_URL = "https://github.com/yuchdev/{PACKAGE_NAME}"

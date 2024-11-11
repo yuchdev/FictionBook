@@ -16,11 +16,15 @@ def reader_example(file_path):
         print(f"Structure of body:\n{reader.body.to_yaml()}")
     print(f"Images:\n{reader.images}")
 
+    # Write paragraphs to text file
+    with open("output.txt", "w", encoding="utf-8") as f:
+        for paragraph in reader.paragraphs:
+            f.write(paragraph + "\n\n")
+
 
 def main():
     parser = argparse.ArgumentParser(description="FB2 Book reader")
-    parser.add_argument("--file-path",
-                        required=True,
+    parser.add_argument("file_path",
                         help="Path to the FB2 book file")
     parser.add_argument("--images-dir",
                         required=False,

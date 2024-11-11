@@ -2,7 +2,10 @@
 import os
 import json
 import base64
-from xml.etree.ElementTree import Element, SubElement, ElementTree
+from xml.etree.ElementTree import Element, SubElement
+from xml.etree.ElementTree import ElementTree as et
+
+import markdown2
 
 
 class Fb2Writer:
@@ -21,8 +24,6 @@ class Fb2Writer:
         :param file_name:
         :param images_dir:
         """
-        if not file_name.endswith(".fb2"):
-            file_name += ".fb2"
         self.file_name = file_name
         self.images_dir = images_dir
         self.metadata = None
@@ -77,7 +78,34 @@ class Fb2Writer:
         self.metadata = self.description_elem  # for clarity
         self.dict_to_element(self.metadata, metadata)
 
-    def set_paragraphs(self, paragraphs):
+    def set_paragraphs(self, paragraphs, content_type):
+        """
+        Wraps the specific paragraph setting methods.
+        :param paragraphs: list of paragraphs to set
+        :param content_type: type of content to set ('plaintext', 'markdown', 'xml')
+        """
+        if content_type == 'plaintext':
+            self._set_paragraphs_plaintext(paragraphs)
+        elif content_type == 'markdown':
+            self._set_paragraphs_markdown(paragraphs)
+        elif content_type == 'xml':
+            self._set_paragraphs_xml(paragraphs)
+        else:
+            raise ValueError("Unsupported content type")
+
+    def _convert_html_to_fb2(self, html_content):
+        """
+        Helper method to convert HTML content (derived from Markdown) to FB2 tags.
+        """
+        # This is a simplified example. Ideally, you would use an HTML parser.
+        html_content = html_content.replace("<em>", f'<emphasis>')
+        html_content = html_content.replace("</em>", f'</emphasis>')
+        html_content = html_content.replace("<strong>", f'<strong>')
+        html_content = html_content.replace("</strong>", f'</strong>')
+        # Add other conversions as needed
+        return html_content
+
+    def _set_paragraphs_plaintext(self, paragraphs):
         """
         Set the book body from a list of paragraphs
         :param paragraphs:
@@ -109,10 +137,30 @@ class Fb2Writer:
                     p_elem.text = paragraph
                 # Add an empty-line
                 empty_line_elem = SubElement(section_elem, "empty-line")
-        else:
+        elif isinstance(paragraphs[0], str):
             for paragraph in paragraphs:
                 p_elem = SubElement(section_elem, "p")
                 p_elem.text = paragraph
+        else:
+            raise ValueError(f"Invalid paragraph type {type(paragraphs[0])}")
+
+    def _set_paragraphs_markdown(self, paragraphs):
+        """
+        Converts markdown content to FB2 tags, e.g., *text* to <emphasis>text</emphasis>,
+        **text** to <strong>text</strong>, and so on.
+        """
+        md_parser = markdown2.Markdown(extras=["footnotes"])
+        for paragraph in paragraphs:
+            html_content = md_parser.convert(paragraph)
+            p = et.SubElement(self.body, 'p')
+            p.text = self._convert_html_to_fb2(html_content)
+
+    def _set_paragraphs_xml(self, paragraphs):
+        """
+        Writes every list item as is, assuming it's correct XML.
+        """
+        for paragraph in paragraphs:
+            self.body.append(et.fromstring(paragraph))
 
     def set_body(self, body):
         """
