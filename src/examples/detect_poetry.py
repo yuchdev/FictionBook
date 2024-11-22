@@ -143,11 +143,7 @@ def perform_overall_analysis(metadata):
         for punc, count in line['punctuation_counts'].items():
             total_punctuation_counts[punc] = total_punctuation_counts.get(punc, 0) + count
 
-    # Calculate average line length
-    if total_lines > 0:
-        average_line_length = total_length / total_lines
-    else:
-        average_line_length = 0
+    average_line_length = total_length / total_lines if total_lines > 0 else 0
 
     # Analyze stanza patterns
     stanza_line_counts = [stanza['line_count'] for stanza in metadata['stanzas']]
@@ -190,6 +186,8 @@ def main():
         json.dump(metadata, f, indent=4, ensure_ascii=False)
 
     print(f"Analysis complete. Results saved to '{output_file}'.")
+
+    return 0
 
 
 if __name__ == '__main__':
