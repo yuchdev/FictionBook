@@ -1,3 +1,12 @@
+<<<<<<< HEAD
 markdown2
 pypdf
 fuzzywuzzy
+=======
+pathlib
+pypdf~=4.2.0
+setuptools~=70.1.1
+
+xmltodict~=0.13.0
+xmljson~=0.2.1
+>>>>>>> cbe7e2d8000bbd79fdd558a1a628f78e2cb888fd

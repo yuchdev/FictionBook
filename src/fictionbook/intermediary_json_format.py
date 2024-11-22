@@ -2,7 +2,7 @@ import json
 import xml.etree.ElementTree as et
 
 
-class IntermediaryXmlFormat:
+class IntermediaryJsonFormat:
     """
     Intermediary format for storing book data
     Can be serialized and deserialized to/from XML or JSON
@@ -45,10 +45,10 @@ class IntermediaryXmlFormat:
 
     def __init__(self, tag_name, attributes=None, children=None, text=None):
         """
-        Initialize the IntermediaryXmlFormat object
+        Initialize the IntermediaryJsonFormat object
         :param tag_name: element tag name, e.g. "description", "section", "p"
         :param attributes: element attributes, e.g. {"id": "1", "class": "chapter"}
-        :param children: list of child objects of IntermediaryXmlFormat type
+        :param children: list of child objects of IntermediaryJsonFormat type
         :param text: content of the element
         """
         assert isinstance(tag_name, str), "tag_name must be a string"
@@ -71,6 +71,46 @@ class IntermediaryXmlFormat:
         """
         return self.to_pretty_xml()
 
+    def __eq__(self, other):
+        """
+        Compare two IntermediaryJsonFormat objects for equality
+        :param other: Another IntermediaryJsonFormat object to compare with
+        :return: True if both objects are equal, False otherwise
+        """
+        if not isinstance(other, IntermediaryJsonFormat):
+            return False
+
+        # Check if tag names are equal
+        if self.tag_name != other.tag_name:
+            return False
+
+        # Check if attributes are equal
+        if self.attributes != other.attributes:
+            return False
+
+        # Check if text is equal
+        if self.text != other.text:
+            return False
+
+        # Check if number of children is equal
+        if len(self.children) != len(other.children):
+            return False
+
+        # Recursively check if each child is equal
+        for self_child, other_child in zip(self.children, other.children):
+            if self_child != other_child:
+                return False
+
+        return True
+
+    def __ne__(self, other):
+        """
+        Compare two IntermediaryJsonFormat objects for inequality
+        :param other: Another IntermediaryJsonFormat object to compare with
+        :return: True if both objects are not equal, False otherwise
+        """
+        return not self.__eq__(other)
+
     def add_child(self, child):
         """
         Add a child object to the current object
@@ -78,15 +118,19 @@ class IntermediaryXmlFormat:
         <section>
             <p>...</p>
         </section>
-        :param child: IntermediaryXmlFormat object
+        :param child: IntermediaryJsonFormat object
         """
+        assert isinstance(child, IntermediaryJsonFormat), f"child must be IntermediaryJsonFormat, not {type(child)}"
         self.children.append(child)
 
     def add_children(self, children):
         """
         Add multiple child objects to the current object
-        :param children: list of IntermediaryXmlFormat objects
+        :param children: list of IntermediaryJsonFormat objects
         """
+        assert isinstance(children, list), f"children must be list, not {type(children)}"
+        for child in children:
+            assert isinstance(child, IntermediaryJsonFormat), f"child must be IntermediaryJsonFormat, not {type(child)}"
         self.children.extend(children)
 
     def add_attribute(self, key, value):
@@ -128,7 +172,6 @@ class IntermediaryXmlFormat:
     def to_dict(self):
         """
         Convert the object to Python dictionary
-        Warning: we lose attributes while converting to JSON
         :return: Python dictionary
         """
         result = {
@@ -139,13 +182,6 @@ class IntermediaryXmlFormat:
         if self.children:
             result["children"] = [child.to_dict() for child in self.children]
         return result
-
-    def to_json(self):
-        """
-        Convert the object to pretty JSON string
-        :return: JSON string
-        """
-        return json.dumps(self.to_dict(), indent=2)
 
     def to_yaml(self, indent=0):
         """
@@ -164,7 +200,7 @@ class IntermediaryXmlFormat:
         Collect all elements with the specified tag name from the object
         Iterate recursively and collect all elements
         :param tag_name: the tag name of the elements to collect
-        :return: list of references to IntermediaryXmlFormat objects
+        :return: list of references to IntermediaryJsonFormat objects
         """
         result = []
         if self.tag_name == tag_name:
@@ -198,7 +234,7 @@ class IntermediaryXmlFormat:
     @classmethod
     def from_xml(cls, xml_str):
         """
-        Create IntermediaryXmlFormat object from XML string
+        Create IntermediaryJsonFormat object from XML string
         :param xml_str: XML string
         """
         root = et.fromstring(xml_str)
@@ -207,64 +243,47 @@ class IntermediaryXmlFormat:
     @classmethod
     def from_dict(cls, json_dict):
         """
-        Create IntermediaryXmlFormat object from dictionary
-        Created format looks like IntermediaryXmlFormat without attributes
-        (attributes are not supported in JSON)
-
-        Example JSON:
+        Recursively construct IntermediaryJsonFormat objects from a dictionary
+        e.g.
         {
-            "description": {
-                "title-info": {
-                    "book-title": "Title",
-                    "author": "Author"
+            "tag": "section",
+            "attributes": {"id": "1"},
+            "children": [
+                {
+                    "tag": "p",
+                    "attributes": {"id": "1"},
+                    "text": "Paragraph 1"
+                },
+                {
+                    "tag": "p",
+                    "attributes": {"id": "2"},
+                    "text": "Paragraph 2"
                 }
-            },
-            "body": {
-                "section": [
-                    {
-                        "title": "Title",
-                        "p": "Paragraph"
-                    }
-                ]
-            }
+            ]
         }
-
-        Resulting intermediary format:
-        <description>
-            <title-info>
-                <book-title>Title</book-title>
-                <author>Author</author>
-            </title-info>
-            <body>
-                <section>
-                    <title>Title</title>
-                    <p>Paragraph</p>
-                </section>
-            </body>
-        </description>
-
-        :param json_dict: JSON as a dictionary
-        :return: IntermediaryXmlFormat object
+        converts to
+        <section id="1">
+            <p id="1">Paragraph 1</p>
+            <p id="2">Paragraph 2</p>
+        </section>
+        :param json_dict: JSON as a dictionary representing the XML structure
+        :return: IntermediaryJsonFormat object
         """
-        tag_name, data = list(json_dict.items())[0]
-        children = [IntermediaryXmlFormat.from_dict(child) for child in data]
-        return cls(tag_name, children=children)
-
-    @classmethod
-    def from_json(cls, json_str):
-        """
-        Create IntermediaryXmlFormat object from JSON string
-        :param json_str: JSON string
-        """
-        json_dict = json.loads(json_str)
-        return cls.from_dict(json_dict)
+        tag_name = json_dict["tag"]
+        attributes = json_dict.get("attributes", {})
+        children = [cls.from_dict(child) for child in json_dict.get("children", [])]
+        text = json_dict.get("text", "")
+        return cls(tag_name, attributes, children, text)
 
     @classmethod
     def _from_element(cls, element):
         """
-        Create IntermediaryXmlFormat object from XML element
+        Create IntermediaryJsonFormat object from XML element
         :param element: XML element
-        :return: IntermediaryXmlFormat object
+        :return: IntermediaryJsonFormat object
         """
+        tag_name = element.tag.split("}")[1] if '}' in element.tag else element.tag
+        attributes = element.attrib
+        text = element.text.strip() if element.text else ""
         children = [cls._from_element(child) for child in element]
-        return cls(element.tag, children=children)
+        return cls(tag_name, attributes, children, text)

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0" xmlns:l="http://www.w3.org/1999/xlink">
+<description>
+<title-info>
+<genre>prose_contemporary</genre>
+<author>
+<first-name>Victor</first-name>
+<last-name>Pelevin</last-name>
+</author>
+<book-title>Sol Invictus. Book 1</book-title>
+<annotation>
+<p>Sasha is a progressive Moscow blonde. She is in her thirties, there is no virus on the horizon yet, and she is going on a journey promised to her by Shiva himself on the sacred Indian mountain Arunachala.</p>
+<p>Sasha will meet historians-necroempaths, Roman princeps, American corporate anarchists, Turkish philologists-Sufis, Cuban sex-workers, and other interesting people (and not only people). But most importantly, she will touch the Great Mystery - and see what Elon Musk calls "computer simulation", and what the Holy Church calls "the God's Creation".</p>
+<p>You will learn what Sasha became after meeting the Mystery from the book. What the Mystery became after meeting Sasha, you are already somewhat aware of.</p>
+</annotation>
+<keywords>postmodernism, mystery, philosophical prose, spiritual quest, contemporary art</keywords>
+<date value="2024-01-01">2020</date>
+<coverpage>
+<image l:href="#cover.jpg"/>
+</coverpage>
+<lang>en</lang>
+<sequence name="Sol Invictus" number="1"/>
+</title-info>
+<document-info>
+<author>
+<nickname>Atatat</nickname>
+</author>
+<program-used>FictionBook2 Python Library</program-used>
+<date value="2024-02-09">2024-02-09</date>
+<version>1.0</version>
+<history>
+<p>v1.0 – creating fb2</p>
+</history>
+</document-info>
+<publish-info>
+<book-name>Sol Invictus. Book 1</book-name>
+<publisher>Can't buy it anywhere</publisher>
+<city>HCMC</city>
+<year>2024</year>
+</publish-info>
+</description>
+</FictionBook>
