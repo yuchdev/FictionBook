@@ -207,7 +207,7 @@ class Fb2Writer:
             self.indent(self.root)
 
         # Create XML tree
-        tree = ElementTree(self.root)
+        tree = et.ElementTree(self.root)
         tree.write(self.file_name, encoding='utf-8', xml_declaration=True)
 
         if debug_mode:
